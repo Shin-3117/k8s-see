@@ -22,7 +22,7 @@ export const DeveloperNode: React.FC<{ data: DeveloperNodeData }> = ({ data }) =
   return (
     <div
       onClick={data.onClick}
-      className={`rounded-xl border p-3 flex flex-col items-center justify-center cursor-pointer transition-all w-[120px] shadow-xl ${borderClass}`}
+      className={`rounded-xl border p-3 flex flex-col items-center justify-center cursor-pointer transition-all w-full h-full relative shadow-xl ${borderClass}`}
     >
       <div className="w-10 h-10 rounded-full bg-slate-800 flex items-center justify-center text-blue-400 mb-1.5 shadow-inner border border-slate-700">
         <User className="w-6 h-6" />

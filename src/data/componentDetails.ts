@@ -283,5 +283,46 @@ export const COMPONENT_DETAILS: Record<K8sComponentId, ComponentDetailInfo> = {
     ],
     configPaths: [],
     badgeColor: 'bg-pink-600'
+  },
+  'awsCloud': {
+    id: 'awsCloud',
+    name: 'AWS Cloud (Amazon Web Services)',
+    category: 'External',
+    k8sRole: '외부 클라우드 인프라 (EBS gp3 볼륨 & EC2 가상 머신)',
+    summary: '쿠버네티스 클러스터 외부의 퍼블릭 클라우드 인프라로, EBS CSI Driver와 연계하여 블록 스토리지 볼륨 동적 프로비저닝 및 인스턴스 Attach를 수행합니다.',
+    deepDive: [
+      'ec2:CreateVolume: StorageClass 매개변수(gp3, IOPS 3000, 125MB/s, KMS 암호화)에 부합하는 가상 디스크(EBS)를 생성합니다.',
+      'ec2:AttachVolume: 파드가 스케줄링된 Worker Node(EC2 인스턴스)에 디바이스(/dev/xvdf 또는 /dev/nvme1n1)로 하드웨어 연결합니다.',
+      'CSI Specification: Kubernetes Control Plane(csi-provisioner, csi-attacher)과 Worker Node(aws-ebs-csi-node 데몬셋)의 gRPC 호출을 수신합니다.',
+      '데이터 영속성: Pod가 종료되거나 다른 노드로 이동해도 EBS 볼륨은 클라우드에 독립적으로 보존되어 데이터 무손실을 보장합니다.'
+    ],
+    cliCommands: [
+      'aws ec2 describe-volumes --volume-ids vol-0a91f4b2',
+      'aws ec2 describe-volume-status --volume-ids vol-0a91f4b2',
+      'kubectl get storageclass,pvc,pv'
+    ],
+    configPaths: ['/etc/kubernetes/csi/ebs.csi.aws.com'],
+    badgeColor: 'bg-amber-600'
+  },
+  'ingressController': {
+    id: 'ingressController',
+    name: 'Ingress Controller (ingress-nginx)',
+    category: 'Worker Node',
+    k8sRole: 'L7 애플리케이션 계층 역방향 프록시 (Reverse Proxy & Load Balancer)',
+    summary: '클러스터 외부에서 들어오는 HTTP/HTTPS 트래픽을 단일 엔드포인트(Port 80/443)에서 수신하여, 호스트(도메인) 및 URL 경로 규칙에 따라 적절한 백엔드 파드들로 스마트 라우팅합니다.',
+    deepDive: [
+      '1. 선언과 구현체의 분리: Ingress 리소스는 규칙 정의(메타데이터)일 뿐이며, Ingress Controller 데몬/디플로이먼트 파드가 실제 NGINX/Envoy 프록시 엔진을 구동합니다.',
+      '2. API Watch & Direct Pod Routing: EndpointSlice API를 감시하여 Service ClusterIP/iptables를 거치지 않고 실제 백엔드 파드 IP(예: 10.244.1.25:8080)로 직접 트래픽을 전송(Zero-Hop)합니다.',
+      '3. TLS Termination (SSL 오프로딩): Kubernetes Secret(tls.crt, tls.key)을 로드하여 443 포트에서 암호화 핸드셰이크를 처리하고 백엔드 파드에는 복호화된 평문 HTTP를 전달합니다.',
+      '4. 무중단 동적 리로딩: Go 컨트롤러 템플릿 렌더링 및 Lua 모듈(lua_shared_dict)을 통해 파드 스케일링 시에도 무중단으로 업스트림 라우팅 테이블을 실시간 갱신합니다.'
+    ],
+    cliCommands: [
+      'kubectl get ingress -A',
+      'kubectl describe ingress ecommerce-ingress',
+      'kubectl logs -n ingress-nginx -l app.kubernetes.io/name=ingress-nginx -f',
+      'curl -k -v https://api.example.com/orders'
+    ],
+    configPaths: ['/etc/nginx/nginx.conf', '/etc/ingress-controller/ssl'],
+    badgeColor: 'bg-purple-600'
   }
 };

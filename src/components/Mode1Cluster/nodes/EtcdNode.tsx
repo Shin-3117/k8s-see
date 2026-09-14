@@ -22,7 +22,7 @@ export const EtcdNode: React.FC<{ data: EtcdNodeData }> = ({ data }) => {
   return (
     <div
       onClick={data.onClick}
-      className={`rounded-xl border p-2.5 flex flex-col items-center justify-center cursor-pointer transition-all w-[140px] shadow-xl ${borderClass}`}
+      className={`rounded-xl border p-2 flex flex-col items-center justify-center cursor-pointer transition-all w-full h-full relative shadow-xl ${borderClass}`}
     >
       <div className="flex items-center gap-1.5 mb-1">
         <div className="flex -space-x-1.5">

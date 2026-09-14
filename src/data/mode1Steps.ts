@@ -584,6 +584,13 @@ export const MODE1_STEPS: Mode1Step[] = [
         label: 'HTTP GET (외부 사용자 트래픽 인입 ➔ Pod 로드밸런싱)',
         method: 'Traffic Ingress',
         color: '#EC4899'
+      },
+      {
+        from: 'kube-proxy-1',
+        to: 'runtime-2',
+        label: 'CNI VXLAN: 10.244.2.21:80 (Pod-2 터널링 라우팅)',
+        method: 'Overlay Routing',
+        color: '#10B981'
       }
     ],
     description: 'Kubelet의 Readiness Probe가 200 OK를 확인하여 파드 상태를 "Ready (1/1)"로 확정 보고합니다. EndpointSlice Controller가 파드 IP들을 서비스 엔드포인트에 추가하고, 각 노드의 kube-proxy가 커널 iptables/IPVS 룰을 갱신하여 외부 사용자 트래픽이 양쪽 파드로 완벽하게 로드밸런싱됩니다!',

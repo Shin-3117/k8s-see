@@ -51,6 +51,59 @@ export const WorkerNodeCard: React.FC<{ data: WorkerNodeCardData }> = ({ data })
         className="w-2.5 h-2.5 bg-pink-500 !right-[-6px] !bottom-[22px]"
       />
 
+      {/* Target handle from Ingress Controller (Right middle) */}
+      <Handle
+        type="target"
+        position={Position.Right}
+        id="ingress-target"
+        className="w-2.5 h-2.5 bg-purple-500 !right-[-6px] !top-[50%]"
+      />
+
+      {/* Target & Source handle from AWS Cloud EBS Attach (Top - Worker Node 1 only) */}
+      {data.nodeId === 'worker-1' && (
+        <>
+          <Handle
+            type="target"
+            position={Position.Top}
+            id="storage-target"
+            className="w-2.5 h-2.5 bg-amber-500 !top-[-6px] !left-[20%]"
+            title="EBS Block Device Mount Point (/dev/nvme1n1)"
+          />
+          <Handle
+            type="source"
+            position={Position.Top}
+            id="storage-source"
+            className="w-2.5 h-2.5 bg-amber-500 !top-[-6px] !left-[20%]"
+          />
+        </>
+      )}
+
+      {/* CNI Inter-Node Pod Network handles (Top & Bottom) */}
+      <Handle
+        type="target"
+        position={Position.Top}
+        id="cni-top-target"
+        className="w-2.5 h-2.5 bg-emerald-500 !top-[-6px] !left-[50%]"
+      />
+      <Handle
+        type="source"
+        position={Position.Top}
+        id="cni-top-source"
+        className="w-2.5 h-2.5 bg-emerald-500 !top-[-6px] !left-[50%]"
+      />
+      <Handle
+        type="source"
+        position={Position.Bottom}
+        id="cni-bottom-source"
+        className="w-2.5 h-2.5 bg-emerald-500 !bottom-[-6px] !left-[50%]"
+      />
+      <Handle
+        type="target"
+        position={Position.Bottom}
+        id="cni-bottom-target"
+        className="w-2.5 h-2.5 bg-emerald-500 !bottom-[-6px] !left-[50%]"
+      />
+
       {/* Node Header */}
       <div className="flex items-center justify-between border-b border-slate-800 pb-1.5 mb-2">
         <div className="flex items-center gap-1.5">

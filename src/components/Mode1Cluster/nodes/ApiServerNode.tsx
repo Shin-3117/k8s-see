@@ -21,7 +21,7 @@ export const ApiServerNode: React.FC<{ data: ApiServerNodeData }> = ({ data }) =
   return (
     <div
       onClick={data.onClick}
-      className={`rounded-xl border-2 p-3.5 flex flex-col items-center justify-center cursor-pointer transition-all w-[240px] shadow-2xl ${borderClass}`}
+      className={`rounded-xl border-2 p-3 flex flex-col items-center justify-center cursor-pointer transition-all w-full h-full relative shadow-2xl ${borderClass}`}
     >
       {/* Target Handle from Developer (Left) */}
       <Handle type="target" position={Position.Left} id="left" className="w-2.5 h-2.5 bg-blue-500 !left-[-6px]" />
@@ -43,6 +43,7 @@ export const ApiServerNode: React.FC<{ data: ApiServerNodeData }> = ({ data }) =
       {/* Source Handles to Worker Nodes (Right) */}
       <Handle type="source" position={Position.Right} id="right-node1" className="w-2.5 h-2.5 bg-blue-500 !right-[-6px] !top-[30%]" />
       <Handle type="source" position={Position.Right} id="right-node2" className="w-2.5 h-2.5 bg-blue-500 !right-[-6px] !top-[70%]" />
+      <Handle type="source" position={Position.Right} id="right-ingress" className="w-2.5 h-2.5 bg-purple-500 !right-[-6px] !top-[50%]" />
 
       <div className="flex items-center gap-2 mb-1">
         <div className="w-6 h-6 rounded bg-blue-600 flex items-center justify-center text-white text-[10px] font-extrabold font-mono shadow">

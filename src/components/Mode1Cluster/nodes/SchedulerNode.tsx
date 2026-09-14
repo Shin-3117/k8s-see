@@ -21,7 +21,7 @@ export const SchedulerNode: React.FC<{ data: SchedulerNodeData }> = ({ data }) =
   return (
     <div
       onClick={data.onClick}
-      className={`rounded-xl border p-2.5 flex flex-col items-center justify-center cursor-pointer transition-all w-[140px] shadow-xl ${borderClass}`}
+      className={`rounded-xl border p-2 flex flex-col items-center justify-center cursor-pointer transition-all w-full h-full relative shadow-xl ${borderClass}`}
     >
       <div className="w-5 h-5 rounded bg-purple-600/30 text-purple-300 flex items-center justify-center text-[9px] font-bold font-mono border border-purple-500/40 mb-1">
         sched

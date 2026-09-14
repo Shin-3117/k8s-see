@@ -21,7 +21,9 @@ const COMPONENT_COORDINATES: Record<K8sComponentId, { x: number; y: number }> = 
   'runtime-2': { x: 860, y: 405 },
   'objects-2': { x: 670, y: 495 },
   'kube-proxy-2': { x: 860, y: 495 },
-  'endusers': { x: 1080, y: 365 }
+  'endusers': { x: 1080, y: 365 },
+  'awsCloud': { x: 585, y: 50 },
+  'ingressController': { x: 980, y: 320 }
 };
 
 export const PacketOverlay: React.FC<PacketOverlayProps> = ({ packets }) => {

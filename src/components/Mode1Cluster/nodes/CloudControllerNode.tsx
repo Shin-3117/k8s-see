@@ -22,7 +22,7 @@ export const CloudControllerNode: React.FC<{ data: CloudControllerNodeData }> = 
   return (
     <div
       onClick={data.onClick}
-      className={`rounded-xl border p-2.5 flex flex-col items-center justify-center cursor-pointer transition-all w-[150px] shadow-xl ${borderClass}`}
+      className={`rounded-xl border p-2 flex flex-col items-center justify-center cursor-pointer transition-all w-full h-full relative shadow-xl ${borderClass}`}
     >
       <div className="flex items-center gap-1.5 mb-1 text-sky-400">
         <Cloud className="w-4 h-4" />
@@ -36,6 +36,10 @@ export const CloudControllerNode: React.FC<{ data: CloudControllerNodeData }> = 
 
       <Handle type="target" position={Position.Bottom} id="bottom-target" className="w-2.5 h-2.5 bg-sky-500 !bottom-[-5px]" />
       <Handle type="source" position={Position.Bottom} id="bottom-source" className="w-2.5 h-2.5 bg-sky-500 !bottom-[-5px]" />
+
+      {/* Handles to AWS Cloud (Top) */}
+      <Handle type="source" position={Position.Top} id="top-aws-source" className="w-2.5 h-2.5 bg-amber-500 !top-[-5px]" />
+      <Handle type="target" position={Position.Top} id="top-aws-target" className="w-2.5 h-2.5 bg-amber-500 !top-[-5px]" />
     </div>
   );
 };

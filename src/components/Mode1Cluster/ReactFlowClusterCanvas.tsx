@@ -20,6 +20,9 @@ import { ControllerManagerNode } from './nodes/ControllerManagerNode';
 import { CloudControllerNode } from './nodes/CloudControllerNode';
 import { WorkerNodeCard } from './nodes/WorkerNodeCard';
 import { EndUsersNode } from './nodes/EndUsersNode';
+import { AwsCloudNode } from './nodes/AwsCloudNode';
+import { IngressControllerNode } from './nodes/IngressControllerNode';
+import { Mode5Step } from '../../types/pipeline';
 import { Move, ZoomIn, Sparkles } from 'lucide-react';
 
 interface ReactFlowClusterCanvasProps {
@@ -29,6 +32,18 @@ interface ReactFlowClusterCanvasProps {
   selectedComponent: K8sComponentId | null;
   onSelectComponent: (componentId: K8sComponentId) => void;
   yamlHighlightedComponents?: K8sComponentId[];
+  showAwsNode?: boolean;
+  awsEbsState?: {
+    volumeId: string;
+    size: string;
+    type: string;
+    status: 'creating' | 'available' | 'attached';
+    attachedNode?: string;
+    devicePath?: string;
+  };
+  showIngressNode?: boolean;
+  ingressControllerState?: Mode5Step['ingressControllerState'];
+  activeRoute?: Mode5Step['activeRoute'];
 }
 
 export const ReactFlowClusterCanvas: React.FC<ReactFlowClusterCanvasProps> = ({
@@ -37,7 +52,12 @@ export const ReactFlowClusterCanvas: React.FC<ReactFlowClusterCanvasProps> = ({
   podsState,
   selectedComponent,
   onSelectComponent,
-  yamlHighlightedComponents = []
+  yamlHighlightedComponents = [],
+  showAwsNode = false,
+  awsEbsState,
+  showIngressNode = false,
+  ingressControllerState,
+  activeRoute
 }) => {
   const nodeTypes = useMemo(
     () => ({
@@ -48,7 +68,9 @@ export const ReactFlowClusterCanvas: React.FC<ReactFlowClusterCanvasProps> = ({
       controllerManager: ControllerManagerNode,
       cloudController: CloudControllerNode,
       workerNode: WorkerNodeCard,
-      endusers: EndUsersNode
+      endusers: EndUsersNode,
+      awsCloud: AwsCloudNode,
+      ingressController: IngressControllerNode
     }),
     []
   );
@@ -174,7 +196,7 @@ export const ReactFlowClusterCanvas: React.FC<ReactFlowClusterCanvasProps> = ({
       {
         id: 'worker-2',
         type: 'workerNode',
-        position: { x: 620, y: 350 },
+        position: { x: 620, y: 390 },
         width: 320,
         height: 290,
         initialWidth: 320,
@@ -194,7 +216,7 @@ export const ReactFlowClusterCanvas: React.FC<ReactFlowClusterCanvasProps> = ({
       {
         id: 'endusers',
         type: 'endusers',
-        position: { x: 1040, y: 260 },
+        position: showIngressNode ? { x: 1240, y: 240 } : { x: 1040, y: 260 },
         width: 120,
         height: 110,
         initialWidth: 120,
@@ -205,7 +227,50 @@ export const ReactFlowClusterCanvas: React.FC<ReactFlowClusterCanvasProps> = ({
           isSelected: selectedComponent === 'endusers',
           onClick: () => onSelectComponent('endusers')
         }
-      }
+      },
+      // 5. Ingress Controller Node (Mode 5)
+      ...(showIngressNode
+        ? [
+            {
+              id: 'ingressController',
+              type: 'ingressController',
+              position: { x: 960, y: 200 },
+              width: 235,
+              height: 200,
+              initialWidth: 235,
+              initialHeight: 200,
+              data: {
+                isActive: activeComponents.includes('ingressController'),
+                isHighlighted: yamlHighlightedComponents.includes('ingressController'),
+                isSelected: selectedComponent === 'ingressController',
+                onClick: () => onSelectComponent('ingressController'),
+                ingressState: ingressControllerState,
+                activeRoute: activeRoute
+              }
+            }
+          ]
+        : []),
+      // 6. External Cloud Node (AWS EBS)
+      ...(showAwsNode
+        ? [
+            {
+              id: 'awsCloud',
+              type: 'awsCloud',
+              position: { x: 480, y: -225 },
+              width: 250,
+              height: 195,
+              initialWidth: 250,
+              initialHeight: 195,
+              data: {
+                isActive: activeComponents.includes('awsCloud'),
+                isHighlighted: yamlHighlightedComponents.includes('awsCloud'),
+                isSelected: selectedComponent === 'awsCloud',
+                onClick: () => onSelectComponent('awsCloud'),
+                volumeState: awsEbsState
+              }
+            }
+          ]
+        : [])
     ];
   }, [
     activeComponents,
@@ -213,25 +278,61 @@ export const ReactFlowClusterCanvas: React.FC<ReactFlowClusterCanvasProps> = ({
     selectedComponent,
     podsNode1,
     podsNode2,
+    showAwsNode,
+    awsEbsState,
+    showIngressNode,
+    ingressControllerState,
+    activeRoute,
     onSelectComponent
   ]);
 
   // Edges connecting all components
   const edges: Edge[] = useMemo(() => {
-    // Check which packets are active
+    // Helper to match packet endpoints with ReactFlow node IDs
+    const matchesEndpoints = (p: PacketPath, from: string, to: string) => {
+      const pFrom = p.from as string;
+      const pTo = p.to as string;
+
+      // Normalize CCM
+      const normPFrom = pFrom === 'cloudControllerManager' ? 'cloudController' : pFrom;
+      const normPTo = pTo === 'cloudControllerManager' ? 'cloudController' : pTo;
+
+      // Exact match
+      if (normPFrom === from && (normPTo === to || normPTo.startsWith(to))) return true;
+
+      // Worker Node 1 endpoints
+      if (to === 'worker-1' && normPFrom === from && (normPTo.endsWith('-1') || normPTo === 'worker-1')) return true;
+      if (from === 'worker-1' && normPTo === to && (normPFrom.endsWith('-1') || normPFrom === 'worker-1')) return true;
+
+      // Worker Node 2 endpoints
+      if (to === 'worker-2' && normPFrom === from && (normPTo.endsWith('-2') || normPTo === 'worker-2')) return true;
+      if (from === 'worker-2' && normPTo === to && (normPFrom.endsWith('-2') || normPFrom === 'worker-2')) return true;
+
+      // Inter-node CNI (worker-1 <-> worker-2)
+      if (from === 'worker-1' && to === 'worker-2' && normPFrom.includes('-1') && normPTo.includes('-2')) return true;
+      if (from === 'worker-2' && to === 'worker-1' && normPFrom.includes('-2') && normPTo.includes('-1')) return true;
+
+      // Ingress Controller endpoints
+      if (from === 'ingressController' && normPFrom === 'ingressController') {
+        if (normPTo === to) return true;
+        if (to === 'worker-1' && (normPTo.endsWith('-1') || normPTo === 'worker-1')) return true;
+        if (to === 'worker-2' && (normPTo.endsWith('-2') || normPTo === 'worker-2')) return true;
+        if (to === 'endusers' && normPTo === 'endusers') return true;
+      }
+      if (to === 'ingressController' && normPTo === 'ingressController') {
+        if (normPFrom === from) return true;
+        if (from === 'apiserver' && normPFrom === 'apiserver') return true;
+        if (from === 'endusers' && normPFrom === 'endusers') return true;
+      }
+
+      return false;
+    };
+
     const isPacketActive = (from: string, to: string) =>
-      packets.some(
-        (p) =>
-          (p.from === from && (p.to === to || p.to.startsWith(to))) ||
-          (p.from.startsWith(from) && (p.to === to || p.to.startsWith(to)))
-      );
+      packets.some((p) => matchesEndpoints(p, from, to));
 
     const getPacketLabel = (from: string, to: string) => {
-      const found = packets.find(
-        (p) =>
-          (p.from === from && (p.to === to || p.to.startsWith(to))) ||
-          (p.from.startsWith(from) && (p.to === to || p.to.startsWith(to)))
-      );
+      const found = packets.find((p) => matchesEndpoints(p, from, to));
       return found ? found.label : undefined;
     };
 
@@ -242,10 +343,26 @@ export const ReactFlowClusterCanvas: React.FC<ReactFlowClusterCanvasProps> = ({
       sourceHandle?: string,
       targetHandle?: string,
       isDashed = false,
-      isBiDirectional = false
+      isBiDirectional = false,
+      defaultLabel?: string
     ): Edge => {
+      const isCni = id === 'e-node1-node2';
+      const isAws = id.includes('aws');
+      const isIngress = id.includes('ingress');
       const active = isPacketActive(source, target) || (isBiDirectional && isPacketActive(target, source));
-      const label = getPacketLabel(source, target) || (isBiDirectional ? getPacketLabel(target, source) : undefined);
+      const activeLabel = getPacketLabel(source, target) || (isBiDirectional ? getPacketLabel(target, source) : undefined);
+      const label = active ? (activeLabel || defaultLabel) : defaultLabel;
+
+      let edgeColor = '#475569';
+      if (isCni) {
+        edgeColor = active ? '#34D399' : '#10B981';
+      } else if (isAws) {
+        edgeColor = active ? '#F59E0B' : '#D97706';
+      } else if (isIngress) {
+        edgeColor = active ? '#C084FC' : '#9333EA';
+      } else if (active) {
+        edgeColor = '#38BDF8';
+      }
 
       return {
         id,
@@ -253,44 +370,64 @@ export const ReactFlowClusterCanvas: React.FC<ReactFlowClusterCanvasProps> = ({
         target,
         sourceHandle,
         targetHandle,
-        type: ConnectionLineType.SmoothStep,
+        type: (isCni || id === 'e-aws-node1') ? ConnectionLineType.Straight : ConnectionLineType.SmoothStep,
         animated: active,
-        label: active ? label : undefined,
+        label,
         labelStyle: {
-          fill: '#F8FAFC',
-          fontWeight: 600,
+          fill: isCni
+            ? (active ? '#ECFDF5' : '#D1FAE5')
+            : isAws
+            ? (active ? '#FEF3C7' : '#FDE68A')
+            : isIngress
+            ? (active ? '#FAF5FF' : '#F3E8FF')
+            : '#F8FAFC',
+          fontWeight: isCni || isAws || isIngress ? 700 : 600,
           fontFamily: 'Fira Code, monospace',
-          fontSize: 10
+          fontSize: isCni || isAws || isIngress ? 9.5 : 10
         },
         labelBgStyle: {
-          fill: '#0F172A',
+          fill: isCni ? '#062E25' : isAws ? '#2A1B05' : isIngress ? '#2E1065' : '#0F172A',
           fillOpacity: 0.95,
-          stroke: active ? '#38BDF8' : '#334155',
+          stroke: isCni
+            ? (active ? '#34D399' : '#059669')
+            : isAws
+            ? (active ? '#F59E0B' : '#B45309')
+            : isIngress
+            ? (active ? '#C084FC' : '#7E22CE')
+            : (active ? '#38BDF8' : '#334155'),
           strokeWidth: 1.5,
           rx: 6
         },
         labelBgPadding: [8, 4],
         style: active
           ? {
-              stroke: '#38BDF8',
+              stroke: edgeColor,
               strokeWidth: 3,
-              filter: 'drop-shadow(0 0 8px rgba(56, 189, 248, 0.8))'
+              filter: `drop-shadow(0 0 8px ${
+                isCni
+                  ? 'rgba(52, 211, 153, 0.8)'
+                  : isAws
+                  ? 'rgba(245, 158, 11, 0.8)'
+                  : isIngress
+                  ? 'rgba(192, 132, 252, 0.8)'
+                  : 'rgba(56, 189, 248, 0.8)'
+              })`
             }
           : {
-              stroke: '#475569',
-              strokeWidth: 1.5,
-              strokeDasharray: isDashed ? '5 5' : undefined
+              stroke: edgeColor,
+              strokeWidth: isCni || isAws || isIngress ? 2 : 1.5,
+              strokeDasharray: isDashed ? '6 4' : undefined
             },
         markerEnd: {
           type: MarkerType.ArrowClosed,
-          color: active ? '#38BDF8' : '#475569',
+          color: edgeColor,
           width: 14,
           height: 14
         },
         markerStart: isBiDirectional
           ? {
               type: MarkerType.ArrowClosed,
-              color: active ? '#38BDF8' : '#475569',
+              color: edgeColor,
               width: 14,
               height: 14
             }
@@ -320,16 +457,108 @@ export const ReactFlowClusterCanvas: React.FC<ReactFlowClusterCanvasProps> = ({
       // API Server -> Worker Node 2 (kubelet)
       makeEdge('e-api-node2', 'apiserver', 'worker-2', 'right-node2', 'kubelet-target'),
 
-      // End Users -> Worker Node 1 (kube-proxy)
-      makeEdge('e-user-node1', 'endusers', 'worker-1', 'left-node1', 'proxy-target', true),
+      // End Users -> Worker Nodes (Default Mode 1 direct traffic)
+      ...(!showIngressNode
+        ? [
+            makeEdge('e-user-node1', 'endusers', 'worker-1', 'left-node1', 'proxy-target', true),
+            makeEdge('e-user-node2', 'endusers', 'worker-2', 'left-node2', 'proxy-target', true)
+          ]
+        : []),
 
-      // End Users -> Worker Node 2 (kube-proxy)
-      makeEdge('e-user-node2', 'endusers', 'worker-2', 'left-node2', 'proxy-target', true)
+      // Mode 5 Ingress Controller Edges
+      ...(showIngressNode
+        ? [
+            // API Server <-> Ingress Controller (Watch Event & Endpoints sync)
+            makeEdge(
+              'e-api-ingress',
+              'apiserver',
+              'ingressController',
+              'right-ingress',
+              'target-from-api',
+              true,
+              true,
+              'Watch Ingress / Endpoints'
+            ),
+            // End Users <-> Ingress Controller (HTTPS 443 Inbound & 200 OK Response)
+            makeEdge(
+              'e-user-ingress',
+              'endusers',
+              'ingressController',
+              'left-ingress',
+              'target-from-user',
+              false,
+              true,
+              'HTTPS :443 (TLS L7)'
+            ),
+            // Ingress Controller -> Worker Node 1 (Proxy to order-service)
+            makeEdge(
+              'e-ingress-node1',
+              'ingressController',
+              'worker-1',
+              'source-to-node1',
+              'ingress-target',
+              true,
+              false,
+              'Proxy: /orders ➔ 10.244.1.25:8080'
+            ),
+            // Ingress Controller -> Worker Node 2 (Proxy to product-service)
+            makeEdge(
+              'e-ingress-node2',
+              'ingressController',
+              'worker-2',
+              'source-to-node2',
+              'ingress-target',
+              true,
+              false,
+              'Proxy: /products ➔ 10.244.2.18:8080'
+            )
+          ]
+        : []),
+
+      // Worker Node 1 <-> Worker Node 2 (CNI Pod Network / VXLAN Overlay)
+      makeEdge(
+        'e-node1-node2',
+        'worker-1',
+        'worker-2',
+        'cni-bottom-source',
+        'cni-top-target',
+        true,
+        true,
+        'CNI Pod Network (Overlay / VXLAN)'
+      ),
+
+      // External Cloud (AWS) Edges
+      ...(showAwsNode
+        ? [
+            // Cloud Controller <-> AWS Cloud (CSI API calls)
+            makeEdge(
+              'e-ccm-aws',
+              'cloudController',
+              'awsCloud',
+              'top-aws-source',
+              'api-target',
+              true,
+              true,
+              'CSI API (ec2:CreateVolume)'
+            ),
+            // AWS Cloud -> Worker Node 1 (EBS Hardware Attachment)
+            makeEdge(
+              'e-aws-node1',
+              'awsCloud',
+              'worker-1',
+              'attach-source',
+              'storage-target',
+              true,
+              false,
+              'EBS Attach (/dev/nvme1n1)'
+            )
+          ]
+        : [])
     ];
-  }, [packets]);
+  }, [packets, showAwsNode, showIngressNode]);
 
   return (
-    <div className="relative bg-[#070D18] rounded-2xl border-2 border-blue-600/70 shadow-2xl overflow-hidden min-w-[980px] h-[640px] flex flex-col">
+    <div className="relative bg-[#070D18] rounded-2xl border-2 border-blue-600/70 shadow-2xl overflow-hidden min-w-[980px] h-[680px] flex flex-col">
       {/* Header Bar */}
       <div className="bg-slate-900/90 px-4 py-2.5 border-b border-blue-900/60 flex items-center justify-between z-10 shrink-0">
         <div className="flex items-center gap-2.5">
@@ -395,6 +624,8 @@ export const ReactFlowClusterCanvas: React.FC<ReactFlowClusterCanvasProps> = ({
                   activeComponents.some((c) => c.includes(node.id === 'worker-1' ? '-1' : '-2')));
 
               if (isActive) return '#F59E0B';
+              if (node.id === 'ingressController') return '#A855F7';
+              if (node.id === 'awsCloud') return '#F59E0B';
               if (node.id === 'apiserver') return '#2563EB';
               if (node.id === 'etcd') return '#06B6D4';
               if (node.id === 'cloudController') return '#0284C7';
@@ -413,6 +644,8 @@ export const ReactFlowClusterCanvas: React.FC<ReactFlowClusterCanvasProps> = ({
                   activeComponents.some((c) => c.includes(node.id === 'worker-1' ? '-1' : '-2')));
 
               if (isActive) return '#FDE68A';
+              if (node.id === 'ingressController') return '#C084FC';
+              if (node.id === 'awsCloud') return '#FCD34D';
               if (node.id === 'apiserver') return '#60A5FA';
               if (node.id === 'etcd') return '#22D3EE';
               if (node.id === 'cloudController') return '#38BDF8';

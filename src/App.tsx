@@ -4,9 +4,13 @@ import { YAML_PRESETS } from './data/yamlPresets';
 import { MODE1_STEPS, MODE1_FLOWCHART_NODES } from './data/mode1Steps';
 import { MODE2_STEPS } from './data/mode2Steps';
 import { MODE3_STEPS, MODE3_FLOWCHART_NODES } from './data/mode3Steps';
+import { MODE4_STEPS, MODE4_FLOWCHART_NODES } from './data/mode4Steps';
+import { MODE5_STEPS, MODE5_FLOWCHART_NODES } from './data/mode5Steps';
 import { Header } from './components/Header';
 import { YamlEditor } from './components/YamlInspector/YamlEditor';
 import { SeparatedYamlViewer } from './components/YamlInspector/SeparatedYamlViewer';
+import { PvcYamlViewer } from './components/YamlInspector/PvcYamlViewer';
+import { IngressYamlViewer } from './components/YamlInspector/IngressYamlViewer';
 import { LineImpactCard } from './components/YamlInspector/LineImpactCard';
 import { ReactFlowClusterCanvas } from './components/Mode1Cluster/ReactFlowClusterCanvas';
 import { PodDeepDiveCanvas } from './components/Mode2Pod/PodDeepDiveCanvas';
@@ -16,10 +20,10 @@ import { StepExplainer } from './components/Common/StepExplainer';
 import { TerminalStream } from './components/Common/TerminalStream';
 import { EtcdLiveViewer } from './components/Common/EtcdLiveViewer';
 import { ComponentDetailModal } from './components/Common/ComponentDetailModal';
-import { AlertCircle } from 'lucide-react';
+import { AlertCircle, HardDrive, Network } from 'lucide-react';
 
 export const App: React.FC = () => {
-  // App Mode (Mode 1: Manifest apply / Mode 2: Pod lifecycle / Mode 3: Separated apply)
+  // App Mode (Mode 1: Manifest apply / Mode 2: Pod lifecycle / Mode 3: Separated apply / Mode 4: PVC & AWS EBS)
   const [currentMode, setCurrentMode] = useState<AppMode>('mode1-manifest');
 
   // Preset Selection
@@ -42,6 +46,16 @@ export const App: React.FC = () => {
   const [isMode3Playing, setIsMode3Playing] = useState<boolean>(false);
   const [mode3Speed, setMode3Speed] = useState<number>(1);
 
+  // Mode 4: Step state & playback (PVC & AWS EBS)
+  const [mode4StepIndex, setMode4StepIndex] = useState<number>(0);
+  const [isMode4Playing, setIsMode4Playing] = useState<boolean>(false);
+  const [mode4Speed, setMode4Speed] = useState<number>(1);
+
+  // Mode 5: Step state & playback (Ingress L7 Routing)
+  const [mode5StepIndex, setMode5StepIndex] = useState<number>(0);
+  const [isMode5Playing, setIsMode5Playing] = useState<boolean>(false);
+  const [mode5Speed, setMode5Speed] = useState<number>(1);
+
   // Detail Modal Component
   const [detailComponentId, setDetailComponentId] = useState<K8sComponentId | null>(null);
 
@@ -56,6 +70,8 @@ export const App: React.FC = () => {
   const currentMode1Step = MODE1_STEPS[mode1StepIndex];
   const currentMode2Step = MODE2_STEPS[mode2StepIndex];
   const currentMode3Step = MODE3_STEPS[mode3StepIndex];
+  const currentMode4Step = MODE4_STEPS[mode4StepIndex];
+  const currentMode5Step = MODE5_STEPS[mode5StepIndex];
 
   // Mode 1 Playback Timer Effect
   useEffect(() => {
@@ -108,6 +124,40 @@ export const App: React.FC = () => {
     return () => clearInterval(timer);
   }, [isMode3Playing, mode3Speed]);
 
+  // Mode 4 Playback Timer Effect (PVC & AWS EBS)
+  useEffect(() => {
+    if (!isMode4Playing) return;
+    const intervalTime = 3200 / mode4Speed;
+    const timer = setInterval(() => {
+      setMode4StepIndex((prev) => {
+        if (prev < MODE4_STEPS.length - 1) {
+          return prev + 1;
+        } else {
+          setIsMode4Playing(false);
+          return prev;
+        }
+      });
+    }, intervalTime);
+    return () => clearInterval(timer);
+  }, [isMode4Playing, mode4Speed]);
+
+  // Mode 5 Playback Timer Effect (Ingress L7 Routing)
+  useEffect(() => {
+    if (!isMode5Playing) return;
+    const intervalTime = 3200 / mode5Speed;
+    const timer = setInterval(() => {
+      setMode5StepIndex((prev) => {
+        if (prev < MODE5_STEPS.length - 1) {
+          return prev + 1;
+        } else {
+          setIsMode5Playing(false);
+          return prev;
+        }
+      });
+    }, intervalTime);
+    return () => clearInterval(timer);
+  }, [isMode5Playing, mode5Speed]);
+
   // Trigger Apply Manifest: start mode 1 from step 0
   const handleApplyManifest = () => {
     setMode1StepIndex(0);
@@ -136,6 +186,7 @@ export const App: React.FC = () => {
           setIsMode1Playing(false);
           setIsMode2Playing(false);
           setIsMode3Playing(false);
+          setIsMode4Playing(false);
         }}
         selectedPresetId={selectedPresetId}
         onPresetChange={(id) => {
@@ -463,6 +514,271 @@ export const App: React.FC = () => {
             {/* Full-Width Large etcd Live Storage Inspector */}
             <div className="w-full">
               <EtcdLiveViewer etcdState={currentMode3Step.etcdState} />
+            </div>
+          </div>
+        )}
+
+        {/* ========================================================================= */}
+        {/* MODE 4: PVC & EXTERNAL CLOUD (AWS EBS) DYNAMIC STORAGE PROVISIONING       */}
+        {/* ========================================================================= */}
+        {currentMode === 'mode4-pvc' && (
+          <div className="flex flex-col gap-4">
+            {/* Phase Banner */}
+            <div className="bg-slate-900/90 border border-slate-800 rounded-xl px-4 py-2.5 flex items-center justify-between flex-wrap gap-2 shadow-lg">
+              <div className="flex items-center gap-3">
+                <div className="flex items-center gap-2 text-xs font-bold text-amber-300">
+                  <span className="w-2.5 h-2.5 rounded-full bg-amber-400 animate-ping" />
+                  <span className="flex items-center gap-1.5">
+                    <HardDrive className="w-3.5 h-3.5" />
+                    {currentMode4Step.phase === 'pvc-request'
+                      ? 'Phase 1: PVC 생성 요청 및 대기 (Pending - WaitForFirstConsumer)'
+                      : currentMode4Step.phase === 'scheduling'
+                      ? 'Phase 2: Pod 스케줄링 및 노드 선정 (Worker-1 AZ: us-east-1a)'
+                      : currentMode4Step.phase === 'aws-provision'
+                      ? 'Phase 3: AWS API 호출 & EBS 볼륨 생성 (vol-0a91f4b2 gp3 20Gi)'
+                      : currentMode4Step.phase === 'node-attach'
+                      ? 'Phase 4: AWS EC2 인스턴스에 EBS 하드웨어 Attach (VolumeAttachment)'
+                      : currentMode4Step.phase === 'kubelet-mount'
+                      ? 'Phase 5: Kubelet mkfs.ext4 포맷 & MySQL /var/lib/mysql 마운트'
+                      : 'Phase 6: Pod 재시작 시 AWS EBS 데이터 무손실 영속성(Persistence) 검증 완료'}
+                  </span>
+                </div>
+
+                <div className="text-xs text-slate-300 hidden md:block font-medium">
+                  {currentMode4Step.phase === 'pvc-request'
+                    ? 'StorageClass의 WaitForFirstConsumer 정책에 의해 파드가 뜰 때까지 볼륨 생성을 안전하게 지연합니다.'
+                    : currentMode4Step.phase === 'scheduling'
+                    ? 'kube-scheduler가 볼륨 토폴로지(us-east-1a)와 노드 연결 한계를 계산하여 Worker Node 1을 확정합니다.'
+                    : currentMode4Step.phase === 'aws-provision'
+                    ? 'AWS EBS CSI Controller가 ec2:CreateVolume API를 호출하여 실제 gp3 볼륨을 생성하고 PV를 Bound합니다.'
+                    : currentMode4Step.phase === 'node-attach'
+                    ? 'Attach/Detach Controller가 ec2:AttachVolume을 호출하여 가상 디스크(/dev/nvme1n1)를 호스트에 물리 연결합니다.'
+                    : currentMode4Step.phase === 'kubelet-mount'
+                    ? 'Kubelet VolumeManager가 NodeStage(mkfs.ext4) 및 NodePublish(바인드 마운트)로 MySQL에 디스크를 전달합니다.'
+                    : '파드가 삭제되거나 다른 노드로 이동해도 etcd의 PV/PVC와 AWS EBS 볼륨에 데이터가 100% 영구 보존됩니다.'}
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2 text-xs">
+                <span className="text-slate-400">AWS 상태:</span>
+                <span className="px-2 py-0.5 rounded bg-amber-500/10 text-amber-300 font-mono text-[11px] border border-amber-500/30">
+                  {currentMode4Step.awsEbsState?.status.toUpperCase()} ({currentMode4Step.awsEbsState?.volumeId})
+                </span>
+              </div>
+            </div>
+
+            {/* Sequence Flowchart (8 Steps) */}
+            <FlowchartSequence
+              nodes={MODE4_FLOWCHART_NODES}
+              activeNodeId={currentMode4Step.activeNodeId || 'm4-1-pvc'}
+              currentStepIndex={mode4StepIndex}
+              onSelectStep={(idx) => {
+                setMode4StepIndex(idx);
+                setIsMode4Playing(false);
+              }}
+              title="PVC ➔ AWS EBS 볼륨 동적 프로비저닝 및 마운트 순서도 (Flowchart)"
+              subTitle="PVC 요청 ➔ Scheduler 노드 확정 ➔ CSI Provisioner ➔ AWS CreateVolume ➔ EC2 Attach ➔ Kubelet mkfs & Mount ➔ MySQL 가동 ➔ 영속성 검증"
+              badgeText="8-Step CSI Pipeline"
+              badgeColorClass="bg-amber-500/20 text-amber-300 border-amber-500/30"
+              isMode1={true}
+            />
+
+            {/* Top Workspace: Cluster Canvas (React Flow with AWS Node) & PVC YAML Viewer */}
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
+              {/* Cluster Canvas */}
+              <div className="lg:col-span-7 xl:col-span-8 bg-slate-900 border border-slate-800 rounded-xl overflow-hidden shadow-2xl relative min-h-[480px] flex flex-col">
+                <ReactFlowClusterCanvas
+                  activeComponents={currentMode4Step.activeComponents}
+                  packets={currentMode4Step.packets}
+                  podsState={currentMode4Step.podsState}
+                  selectedComponent={detailComponentId}
+                  onSelectComponent={(cid) => setDetailComponentId(cid)}
+                  yamlHighlightedComponents={[]}
+                  showAwsNode={true}
+                  awsEbsState={currentMode4Step.awsEbsState}
+                />
+              </div>
+
+              {/* PVC YAML Viewer */}
+              <div className="lg:col-span-5 xl:col-span-4 flex flex-col">
+                <PvcYamlViewer
+                  currentStepPhase={currentMode4Step.phase}
+                  targetYaml={currentMode4Step.targetYaml}
+                  stepNumber={currentMode4Step.stepNumber}
+                />
+              </div>
+            </div>
+
+            {/* Playback Controls */}
+            <PlaybackBar
+              currentStepIndex={mode4StepIndex}
+              totalSteps={MODE4_STEPS.length}
+              isPlaying={isMode4Playing}
+              speed={mode4Speed}
+              onPlayPause={() => setIsMode4Playing(!isMode4Playing)}
+              onPrevStep={() => setMode4StepIndex((prev) => Math.max(0, prev - 1))}
+              onNextStep={() => setMode4StepIndex((prev) => Math.min(MODE4_STEPS.length - 1, prev + 1))}
+              onReset={() => {
+                setMode4StepIndex(0);
+                setIsMode4Playing(false);
+              }}
+              onStepSelect={(idx) => {
+                setMode4StepIndex(idx);
+                setIsMode4Playing(false);
+              }}
+              onSpeedChange={(s) => setMode4Speed(s)}
+              stepTitles={MODE4_STEPS.map((s) => s.title)}
+            />
+
+            {/* Observability Row: Step Explainer & CLI Terminal Stream (Side-by-Side) */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 items-stretch">
+              <StepExplainer
+                stepNumber={currentMode4Step.stepNumber}
+                totalSteps={MODE4_STEPS.length}
+                title={currentMode4Step.title}
+                subTitle={currentMode4Step.subTitle}
+                description={currentMode4Step.description}
+                k8sMechanism={currentMode4Step.k8sMechanism}
+              />
+              <TerminalStream logs={currentMode4Step.cliLogs} />
+            </div>
+
+            {/* Full-Width Large etcd Live Storage Inspector */}
+            <div className="w-full">
+              <EtcdLiveViewer etcdState={currentMode4Step.etcdState} />
+            </div>
+          </div>
+        )}
+
+        {/* =============================================================== */}
+        {/* MODE 5: INGRESS L7 TRAFFIC ROUTING WORKSPACE                   */}
+        {/* =============================================================== */}
+        {currentMode === 'mode5-ingress' && (
+          <div className="space-y-4">
+            {/* Mode 5 Phase Banner */}
+            <div className="bg-gradient-to-r from-purple-950/70 via-slate-900 to-slate-900 border border-purple-800/60 rounded-xl p-3 shadow-lg flex items-center justify-between flex-wrap gap-2">
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-lg bg-purple-600/30 border border-purple-500/50 flex items-center justify-center text-purple-300 shadow">
+                  <Network className="w-4 h-4 text-purple-400" />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs font-bold text-white uppercase tracking-wider">
+                      L7 Ingress Controller
+                    </span>
+                    <span className="text-[11px] font-mono px-2 py-0.5 rounded-full bg-purple-500/20 text-purple-300 border border-purple-500/30">
+                      PHASE: {currentMode5Step.phase.toUpperCase()}
+                    </span>
+                  </div>
+                  <div className="text-xs text-slate-300 hidden md:block font-medium mt-0.5">
+                    {currentMode5Step.phase === 'ingress-create'
+                      ? 'Ingress 리소스(api.example.com) 생성 ➔ TLS 인증서 및 /orders, /products L7 라우팅 규칙 etcd 등록'
+                      : currentMode5Step.phase === 'controller-watch'
+                      ? 'Ingress Controller(ingress-nginx)가 Watch API를 통해 백엔드 파드 IP 목록(EndpointSlices) 직접 수집'
+                      : currentMode5Step.phase === 'dynamic-reload'
+                      ? '템플릿 엔진으로 /etc/nginx/nginx.conf 렌더링 ➔ SIGHUP 및 동적 Lua 모듈을 통한 무중단 리로드'
+                      : currentMode5Step.phase === 'https-ingress'
+                      ? '클라이언트 HTTPS/443 진입 ➔ TLS Handshake & Termination(SSL 복호화) 수행'
+                      : currentMode5Step.phase === 'path-routing-order'
+                      ? '/orders 경로 매칭 ➔ Worker Node 1의 order-api 파드(10.244.1.25:8080)로 직접 L7 역방향 프록시'
+                      : currentMode5Step.phase === 'path-routing-product'
+                      ? '/products 경로 매칭 ➔ Worker Node 2의 product-api 파드(10.244.2.18:8080)로 직접 L7 역방향 프록시'
+                      : '파드 JSON 응답 수신 ➔ Ingress Controller TLS 암호화 ➔ End User 클라이언트에 200 OK 최종 반환'}
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2 text-xs">
+                <span className="text-slate-400">활성 라우트:</span>
+                <span className="px-2 py-0.5 rounded bg-purple-500/10 text-purple-300 font-mono text-[11px] border border-purple-500/30">
+                  {currentMode5Step.activeRoute
+                    ? `${currentMode5Step.activeRoute.path} ➔ ${currentMode5Step.activeRoute.targetPodIp}`
+                    : '대기 중 (Ready)'}
+                </span>
+              </div>
+            </div>
+
+            {/* Sequence Flowchart (7 Steps) */}
+            <FlowchartSequence
+              nodes={MODE5_FLOWCHART_NODES}
+              activeNodeId={currentMode5Step.activeNodeId || 'm5-1-ingress-apply'}
+              currentStepIndex={mode5StepIndex}
+              onSelectStep={(idx) => {
+                setMode5StepIndex(idx);
+                setIsMode5Playing(false);
+              }}
+              title="Ingress L7 트래픽 라우팅 & 리버스 프록시 순서도 (Flowchart)"
+              subTitle="Ingress 생성 ➔ Controller Watch ➔ NGINX 리로드 ➔ HTTPS 요청 & TLS 종료 ➔ /orders 라우팅 ➔ /products 라우팅 ➔ 200 OK 응답"
+              badgeText="7-Step L7 Pipeline"
+              badgeColorClass="bg-purple-500/20 text-purple-300 border-purple-500/30"
+              isMode1={true}
+            />
+
+            {/* Top Workspace: Cluster Canvas (React Flow with Ingress Node) & Ingress YAML Viewer */}
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
+              {/* Cluster Canvas */}
+              <div className="lg:col-span-7 xl:col-span-8 bg-slate-900 border border-slate-800 rounded-xl overflow-hidden shadow-2xl relative min-h-[480px] flex flex-col">
+                <ReactFlowClusterCanvas
+                  activeComponents={currentMode5Step.activeComponents}
+                  packets={currentMode5Step.packets}
+                  podsState={currentMode5Step.podsState}
+                  selectedComponent={detailComponentId}
+                  onSelectComponent={(cid) => setDetailComponentId(cid)}
+                  yamlHighlightedComponents={[]}
+                  showAwsNode={false}
+                  showIngressNode={true}
+                  ingressControllerState={currentMode5Step.ingressControllerState}
+                  activeRoute={currentMode5Step.activeRoute}
+                />
+              </div>
+
+              {/* Ingress YAML Viewer */}
+              <div className="lg:col-span-5 xl:col-span-4 flex flex-col">
+                <IngressYamlViewer
+                  currentStepPhase={currentMode5Step.phase}
+                  targetYaml={currentMode5Step.targetYaml}
+                  stepNumber={currentMode5Step.stepNumber}
+                />
+              </div>
+            </div>
+
+            {/* Playback Controls */}
+            <PlaybackBar
+              currentStepIndex={mode5StepIndex}
+              totalSteps={MODE5_STEPS.length}
+              isPlaying={isMode5Playing}
+              speed={mode5Speed}
+              onPlayPause={() => setIsMode5Playing(!isMode5Playing)}
+              onPrevStep={() => setMode5StepIndex((prev) => Math.max(0, prev - 1))}
+              onNextStep={() => setMode5StepIndex((prev) => Math.min(MODE5_STEPS.length - 1, prev + 1))}
+              onReset={() => {
+                setMode5StepIndex(0);
+                setIsMode5Playing(false);
+              }}
+              onStepSelect={(idx) => {
+                setMode5StepIndex(idx);
+                setIsMode5Playing(false);
+              }}
+              onSpeedChange={(s) => setMode5Speed(s)}
+              stepTitles={MODE5_STEPS.map((s) => s.title)}
+            />
+
+            {/* Observability Row: Step Explainer & CLI Terminal Stream (Side-by-Side) */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 items-stretch">
+              <StepExplainer
+                stepNumber={currentMode5Step.stepNumber}
+                totalSteps={MODE5_STEPS.length}
+                title={currentMode5Step.title}
+                subTitle={currentMode5Step.subTitle}
+                description={currentMode5Step.description}
+                k8sMechanism={currentMode5Step.k8sMechanism}
+              />
+              <TerminalStream logs={currentMode5Step.cliLogs} />
+            </div>
+
+            {/* Full-Width Large etcd Live Storage Inspector */}
+            <div className="w-full">
+              <EtcdLiveViewer etcdState={currentMode5Step.etcdState} />
             </div>
           </div>
         )}

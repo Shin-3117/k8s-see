@@ -1,7 +1,7 @@
 import React from 'react';
 import { AppMode } from '../types/pipeline';
 import { YAML_PRESETS } from '../data/yamlPresets';
-import { Layers, Box, FileCode2, BookOpen, GitFork } from 'lucide-react';
+import { Layers, Box, FileCode2, BookOpen, GitFork, HardDrive, Network } from 'lucide-react';
 
 interface HeaderProps {
   currentMode: AppMode;
@@ -81,7 +81,31 @@ export const Header: React.FC<HeaderProps> = ({
             }`}
           >
             <GitFork className="w-3.5 h-3.5 text-cyan-300" />
-            <span>모드 3: ConfigMap / Deploy / Service 분리 배포</span>
+            <span>모드 3: ConfigMap / Deploy / Service</span>
+          </button>
+
+          <button
+            onClick={() => onModeChange('mode4-pvc')}
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all duration-200 ${
+              currentMode === 'mode4-pvc'
+                ? 'bg-amber-600 text-white shadow-md shadow-amber-600/30'
+                : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/60'
+            }`}
+          >
+            <HardDrive className="w-3.5 h-3.5 text-amber-300" />
+            <span>모드 4: PVC & 외부 스토리지(AWS)</span>
+          </button>
+
+          <button
+            onClick={() => onModeChange('mode5-ingress')}
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all duration-200 ${
+              currentMode === 'mode5-ingress'
+                ? 'bg-purple-600 text-white shadow-md shadow-purple-600/30'
+                : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/60'
+            }`}
+          >
+            <Network className="w-3.5 h-3.5 text-purple-300" />
+            <span>모드 5: Ingress (L7 라우팅)</span>
           </button>
         </div>
 
@@ -109,6 +133,13 @@ export const Header: React.FC<HeaderProps> = ({
             <div className="flex items-center gap-1.5 bg-cyan-950/40 px-2.5 py-1 rounded-lg border border-cyan-800/50 text-xs shadow-inner">
               <span className="w-2 h-2 rounded-full bg-cyan-400 animate-pulse"></span>
               <span className="text-cyan-300 font-semibold text-[11px]">Spring Boot H2 DB + API Server (분리 배포)</span>
+            </div>
+          )}
+
+          {currentMode === 'mode5-ingress' && (
+            <div className="flex items-center gap-1.5 bg-purple-950/40 px-2.5 py-1 rounded-lg border border-purple-800/50 text-xs shadow-inner">
+              <span className="w-2 h-2 rounded-full bg-purple-400 animate-pulse"></span>
+              <span className="text-purple-300 font-semibold text-[11px]">L7 Reverse Proxy & Path Routing</span>
             </div>
           )}
 

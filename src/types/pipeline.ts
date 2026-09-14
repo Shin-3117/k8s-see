@@ -13,7 +13,9 @@ export type K8sComponentId =
   | 'objects-2'
   | 'kube-proxy-1'
   | 'kube-proxy-2'
-  | 'endusers';
+  | 'endusers'
+  | 'awsCloud'
+  | 'ingressController';
 
 export type PodStatus = 'Pending' | 'ContainerCreating' | 'Running' | 'Ready' | 'Terminating' | 'Failed';
 
@@ -38,7 +40,19 @@ export interface PacketPath {
 
 export interface EtcdRecord {
   key: string;
-  type: 'Deployment' | 'ReplicaSet' | 'Pod' | 'EndpointSlice' | 'Service' | 'ConfigMap';
+  type:
+    | 'Deployment'
+    | 'ReplicaSet'
+    | 'Pod'
+    | 'EndpointSlice'
+    | 'Service'
+    | 'ConfigMap'
+    | 'StorageClass'
+    | 'PersistentVolumeClaim'
+    | 'PersistentVolume'
+    | 'VolumeAttachment'
+    | 'Ingress'
+    | 'IngressClass';
   action: 'created' | 'updated' | 'unchanged';
   revision: number;
   highlightFields?: string[];
@@ -67,6 +81,50 @@ export interface Mode1Step {
   };
 }
 
+export interface Mode4Step extends Mode1Step {
+  phase: 'pvc-request' | 'scheduling' | 'aws-provision' | 'node-attach' | 'kubelet-mount' | 'verified';
+  targetYaml: 'storageclass' | 'pvc' | 'deployment' | 'all';
+  awsEbsState?: {
+    volumeId: string;
+    size: string;
+    type: string;
+    status: 'creating' | 'available' | 'attached';
+    attachedNode?: string;
+    devicePath?: string;
+  };
+}
+
+export interface Mode5Step extends Mode1Step {
+  phase:
+    | 'ingress-create'
+    | 'controller-watch'
+    | 'dynamic-reload'
+    | 'https-ingress'
+    | 'path-routing-order'
+    | 'path-routing-product'
+    | 'client-response';
+  targetYaml: 'ingress' | 'service-order' | 'service-product' | 'nginx-conf' | 'all';
+  activeRoute?: {
+    host: string;
+    path: string;
+    targetService: string;
+    targetPodIp: string;
+    targetNode: 'worker-1' | 'worker-2';
+    statusCode: number;
+  };
+  ingressControllerState?: {
+    status: 'syncing' | 'reloaded' | 'routing' | 'ready';
+    reloadsCount: number;
+    sslCert: string;
+    activeConnections: number;
+    upstreams: {
+      name: string;
+      service: string;
+      backends: { ip: string; port: number; status: 'up' | 'draining' }[];
+    }[];
+  };
+}
+
 export interface FlowchartNode {
   id: string;
   name: string;
@@ -76,4 +134,5 @@ export interface FlowchartNode {
   status: 'pending' | 'active' | 'completed' | 'skipped';
 }
 
-export type AppMode = 'mode1-manifest' | 'mode2-pod-lifecycle' | 'mode3-separated-apply';
+export type AppMode = 'mode1-manifest' | 'mode2-pod-lifecycle' | 'mode3-separated-apply' | 'mode4-pvc' | 'mode5-ingress';
+

@@ -22,7 +22,7 @@ export const EndUsersNode: React.FC<{ data: EndUsersNodeData }> = ({ data }) => 
   return (
     <div
       onClick={data.onClick}
-      className={`rounded-xl border p-3 flex flex-col items-center justify-center cursor-pointer transition-all w-[120px] shadow-xl ${borderClass}`}
+      className={`rounded-xl border p-3 flex flex-col items-center justify-center cursor-pointer transition-all w-full h-full relative shadow-xl ${borderClass}`}
     >
       <div className="w-10 h-10 rounded-full bg-slate-800 flex items-center justify-center text-pink-400 mb-1.5 shadow-inner border border-slate-700">
         <Users className="w-6 h-6" />
@@ -43,6 +43,18 @@ export const EndUsersNode: React.FC<{ data: EndUsersNodeData }> = ({ data }) => 
         position={Position.Left}
         id="left-node2"
         className="w-2.5 h-2.5 bg-pink-500 !left-[-5px] !top-[70%]"
+      />
+      <Handle
+        type="source"
+        position={Position.Left}
+        id="left-ingress"
+        className="w-2.5 h-2.5 bg-purple-500 !left-[-5px] !top-[40%]"
+      />
+      <Handle
+        type="target"
+        position={Position.Left}
+        id="left-ingress-target"
+        className="w-2.5 h-2.5 bg-emerald-400 !left-[-5px] !top-[60%]"
       />
     </div>
   );
