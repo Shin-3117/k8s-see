@@ -1,0 +1,86 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    background-color: #0B1120;
+    color: #F8FAFC;
+    font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+  }
+}
+
+/* Custom Scrollbars */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: rgba(15, 23, 42, 0.6);
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(51, 65, 85, 0.8);
+  border-radius: 9999px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(100, 116, 139, 0.9);
+}
+
+/* Code editor font */
+.font-mono-code {
+  font-family: 'Fira Code', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+}
+
+/* Glowing Border effects */
+.k8s-glow-active {
+  box-shadow: 0 0 20px rgba(50, 108, 229, 0.6), inset 0 0 10px rgba(50, 108, 229, 0.3);
+  border-color: #38BDF8 !important;
+}
+
+.k8s-glow-accent {
+  box-shadow: 0 0 20px rgba(16, 185, 129, 0.6), inset 0 0 10px rgba(16, 185, 129, 0.3);
+  border-color: #34D399 !important;
+}
+
+.k8s-glow-warning {
+  box-shadow: 0 0 20px rgba(245, 158, 11, 0.6), inset 0 0 10px rgba(245, 158, 11, 0.3);
+  border-color: #FBBF24 !important;
+}
+
+/* Moving Packet Animation */
+@keyframes packetMove {
+  0% {
+    offset-distance: 0%;
+    opacity: 0;
+  }
+  15% {
+    opacity: 1;
+  }
+  85% {
+    opacity: 1;
+  }
+  100% {
+    offset-distance: 100%;
+    opacity: 0;
+  }
+}
+
+/* React Flow MiniMap Specific Styles */
+.react-flow__minimap {
+  background-color: #070D18 !important;
+}
+
+.react-flow__minimap-node {
+  fill-opacity: 0.95 !important;
+  stroke-opacity: 1 !important;
+  cursor: pointer;
+  transition: fill 0.2s ease, stroke 0.2s ease;
+}
+
+.react-flow__minimap-mask {
+  pointer-events: none;
+}
+
