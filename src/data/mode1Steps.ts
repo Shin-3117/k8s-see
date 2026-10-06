@@ -419,12 +419,12 @@ export const MODE1_STEPS: Mode1Step[] = [
           type: 'Pod',
           action: 'updated',
           revision: 42924,
-          highlightFields: ['status.phase: "ContainerCreating"', 'containerStatuses[0].state.waiting: "ContainerCreating"'],
+          highlightFields: ['status.phase: "Pending"', 'containerStatuses[0].state.waiting: "ContainerCreating"'],
           data: {
             metadata: { name: 'web-server-794d6c-4k8x1' },
             spec: { nodeName: 'worker-node-1' },
             status: {
-              phase: 'ContainerCreating',
+              phase: 'Pending',
               hostIP: '192.168.1.101',
               containerStatuses: [{ name: 'nginx', state: { waiting: { reason: 'ContainerCreating' } } }]
             }
@@ -435,12 +435,12 @@ export const MODE1_STEPS: Mode1Step[] = [
           type: 'Pod',
           action: 'updated',
           revision: 42925,
-          highlightFields: ['status.phase: "ContainerCreating"', 'containerStatuses[0].state.waiting: "ContainerCreating"'],
+          highlightFields: ['status.phase: "Pending"', 'containerStatuses[0].state.waiting: "ContainerCreating"'],
           data: {
             metadata: { name: 'web-server-794d6c-9p2mz' },
             spec: { nodeName: 'worker-node-2' },
             status: {
-              phase: 'ContainerCreating',
+              phase: 'Pending',
               hostIP: '192.168.1.102',
               containerStatuses: [{ name: 'nginx', state: { waiting: { reason: 'ContainerCreating' } } }]
             }

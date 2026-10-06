@@ -209,7 +209,7 @@ export const IngressYamlViewer: React.FC<IngressYamlViewerProps> = ({
       </div>
 
       {/* Footer Insight Banner */}
-      <div className="bg-slate-950/90 px-4 py-2 border-t border-slate-800/80 flex items-center justify-between text-xs text-slate-400 font-mono">
+      <div className="bg-slate-950/90 px-4 py-2 border-t border-slate-800/80 flex flex-wrap gap-2 items-center justify-between text-xs text-slate-400 font-mono">
         <div className="flex items-center gap-2">
           <span className="w-2 h-2 rounded-full bg-purple-400 animate-pulse" />
           <span>규칙: api.example.com (/orders ➔ order-svc:8080 | /products ➔ product-svc:8080)</span>

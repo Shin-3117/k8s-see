@@ -72,7 +72,7 @@ export const YamlEditor: React.FC<YamlEditorProps> = ({
           {isSimulating ? (
             <>
               <CheckCircle2 className="w-3.5 h-3.5 animate-spin" />
-              <span>클러스터 반영 중...</span>
+              <span>예시 재생 중...</span>
             </>
           ) : (
             <>
@@ -128,6 +128,11 @@ export const YamlEditor: React.FC<YamlEditorProps> = ({
           return (
             <div
               key={idx}
+              role="button"
+              tabIndex={0}
+              aria-label={`YAML ${lineNumber}행 선택`}
+              aria-pressed={isSelected}
+              onKeyDown={(event) => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); onSelectLine(lineNumber); } }}
               onClick={() => onSelectLine(lineNumber)}
               className={`group flex items-center rounded px-2 py-0.5 cursor-pointer transition-all duration-150 ${
                 isSelected

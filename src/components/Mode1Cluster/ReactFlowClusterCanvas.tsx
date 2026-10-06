@@ -1,6 +1,7 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useEffect } from 'react';
 import {
   ReactFlow,
+  useNodesState,
   Controls,
   MiniMap,
   Background,
@@ -75,8 +76,8 @@ export const ReactFlowClusterCanvas: React.FC<ReactFlowClusterCanvasProps> = ({
     []
   );
 
-  const podsNode1 = podsState.filter((p) => p.nodeId === 'worker-1');
-  const podsNode2 = podsState.filter((p) => p.nodeId === 'worker-2');
+  const podsNode1 = useMemo(() => podsState.filter(p => p.nodeId === 'worker-1'), [podsState]);
+  const podsNode2 = useMemo(() => podsState.filter(p => p.nodeId === 'worker-2'), [podsState]);
 
   // Define Nodes matching the DevOps Mojo architecture diagram positions
   const nodes: Node[] = useMemo(() => {
@@ -114,7 +115,7 @@ export const ReactFlowClusterCanvas: React.FC<ReactFlowClusterCanvasProps> = ({
         }
       },
       {
-        id: 'cloudController',
+        id: showAwsNode ? 'csiController' : 'cloudController',
         type: 'cloudController',
         position: { x: 395, y: 40 },
         width: 150,
@@ -122,10 +123,11 @@ export const ReactFlowClusterCanvas: React.FC<ReactFlowClusterCanvasProps> = ({
         initialWidth: 150,
         initialHeight: 95,
         data: {
-          isActive: activeComponents.includes('cloudControllerManager'),
-          isHighlighted: yamlHighlightedComponents.includes('cloudControllerManager'),
-          isSelected: selectedComponent === 'cloudControllerManager',
-          onClick: () => onSelectComponent('cloudControllerManager')
+          isCSI: showAwsNode,
+          isActive: activeComponents.includes(showAwsNode ? 'csiController' : 'cloudControllerManager'),
+          isHighlighted: yamlHighlightedComponents.includes(showAwsNode ? 'csiController' : 'cloudControllerManager'),
+          isSelected: selectedComponent === (showAwsNode ? 'csiController' : 'cloudControllerManager'),
+          onClick: () => onSelectComponent(showAwsNode ? 'csiController' : 'cloudControllerManager')
         }
       },
       {
@@ -190,7 +192,8 @@ export const ReactFlowClusterCanvas: React.FC<ReactFlowClusterCanvasProps> = ({
           activeComponents,
           yamlHighlightedComponents,
           selectedComponent,
-          onSelectComponent
+          onSelectComponent,
+          showStorage: showAwsNode
         }
       },
       {
@@ -209,7 +212,8 @@ export const ReactFlowClusterCanvas: React.FC<ReactFlowClusterCanvasProps> = ({
           activeComponents,
           yamlHighlightedComponents,
           selectedComponent,
-          onSelectComponent
+          onSelectComponent,
+          showStorage: showAwsNode
         }
       },
       // 4. End Users Node
@@ -349,6 +353,9 @@ export const ReactFlowClusterCanvas: React.FC<ReactFlowClusterCanvasProps> = ({
       const isCni = id === 'e-node1-node2';
       const isAws = id.includes('aws');
       const isIngress = id.includes('ingress');
+      const packet = packets.find(p => matchesEndpoints(p, source, target) || (isBiDirectional && matchesEndpoints(p, target, source)));
+      const kind = packet?.kind ?? (id === 'e-node1-node2' || id.includes('user') || id.startsWith('e-ingress-node') ? 'traffic' : 'management');
+      const dash = kind === 'traffic' ? undefined : kind === 'configuration' ? '3 5' : '7 4';
       const active = isPacketActive(source, target) || (isBiDirectional && isPacketActive(target, source));
       const activeLabel = getPacketLabel(source, target) || (isBiDirectional ? getPacketLabel(target, source) : undefined);
       const label = active ? (activeLabel || defaultLabel) : defaultLabel;
@@ -403,6 +410,7 @@ export const ReactFlowClusterCanvas: React.FC<ReactFlowClusterCanvasProps> = ({
           ? {
               stroke: edgeColor,
               strokeWidth: 3,
+              strokeDasharray: dash,
               filter: `drop-shadow(0 0 8px ${
                 isCni
                   ? 'rgba(52, 211, 153, 0.8)'
@@ -416,7 +424,7 @@ export const ReactFlowClusterCanvas: React.FC<ReactFlowClusterCanvasProps> = ({
           : {
               stroke: edgeColor,
               strokeWidth: isCni || isAws || isIngress ? 2 : 1.5,
-              strokeDasharray: isDashed ? '6 4' : undefined
+              strokeDasharray: dash ?? (isDashed && kind !== 'traffic' ? '6 4' : undefined)
             },
         markerEnd: {
           type: MarkerType.ArrowClosed,
@@ -443,7 +451,7 @@ export const ReactFlowClusterCanvas: React.FC<ReactFlowClusterCanvasProps> = ({
       makeEdge('e-api-etcd', 'apiserver', 'etcd', 'top-etcd-source', 'bottom-target', false, true),
 
       // API Server <-> Cloud Controller (CCM)
-      makeEdge('e-api-ccm', 'apiserver', 'cloudController', 'top-ccm-source', 'bottom-target', true, true),
+      makeEdge('e-api-ccm', 'apiserver', showAwsNode ? 'csiController' : 'cloudController', 'top-ccm-source', 'bottom-target', true, true),
 
       // API Server <-> Scheduler
       makeEdge('e-api-sched', 'apiserver', 'scheduler', 'bottom-sched-source', 'top-target', false, true),
@@ -524,7 +532,7 @@ export const ReactFlowClusterCanvas: React.FC<ReactFlowClusterCanvasProps> = ({
         'cni-top-target',
         true,
         true,
-        'CNI Pod Network (Overlay / VXLAN)'
+        'Pod network · 라우팅 / 오버레이 등'
       ),
 
       // External Cloud (AWS) Edges
@@ -532,14 +540,14 @@ export const ReactFlowClusterCanvas: React.FC<ReactFlowClusterCanvasProps> = ({
         ? [
             // Cloud Controller <-> AWS Cloud (CSI API calls)
             makeEdge(
-              'e-ccm-aws',
-              'cloudController',
+              'e-csi-aws',
+              'csiController',
               'awsCloud',
               'top-aws-source',
               'api-target',
               true,
               true,
-              'CSI API (ec2:CreateVolume)'
+              'CSI driver → AWS API'
             ),
             // AWS Cloud -> Worker Node 1 (EBS Hardware Attachment)
             makeEdge(
@@ -557,8 +565,16 @@ export const ReactFlowClusterCanvas: React.FC<ReactFlowClusterCanvasProps> = ({
     ];
   }, [packets, showAwsNode, showIngressNode]);
 
+  const [interactiveNodes, setInteractiveNodes, onNodesChange] = useNodesState(nodes);
+  useEffect(() => {
+    setInteractiveNodes(current => nodes.map(node => {
+      const previous = current.find(n => n.id === node.id);
+      return previous ? { ...node, position: previous.position, selected: previous.selected } : node;
+    }));
+  }, [nodes, setInteractiveNodes]);
+
   return (
-    <div className="relative bg-[#070D18] rounded-2xl border-2 border-blue-600/70 shadow-2xl overflow-hidden min-w-[980px] h-[680px] flex flex-col">
+    <div className="relative bg-[#070D18] rounded-2xl border-2 border-blue-600/70 shadow-2xl overflow-hidden w-full min-w-0 h-[500px] sm:h-[600px] flex flex-col">
       {/* Header Bar */}
       <div className="bg-slate-900/90 px-4 py-2.5 border-b border-blue-900/60 flex items-center justify-between z-10 shrink-0">
         <div className="flex items-center gap-2.5">
@@ -576,13 +592,13 @@ export const ReactFlowClusterCanvas: React.FC<ReactFlowClusterCanvasProps> = ({
               </h2>
               <span className="text-[10px] font-mono px-2 py-0.2 rounded-full bg-blue-500/20 text-blue-300 border border-blue-500/30 flex items-center gap-1">
                 <Sparkles className="w-3 h-3 text-cyan-400" />
-                React Flow Interactive
+                줌 · 팬 · 드래그
               </span>
             </div>
           </div>
         </div>
 
-        <div className="flex items-center gap-4 text-xs font-mono text-slate-400">
+        <div className="flex items-center gap-4 text-xs font-mono text-slate-400 hidden sm:flex">
           <span className="flex items-center gap-1 text-[11px] text-slate-300">
             <Move className="w-3 h-3 text-blue-400" />
             노드 드래그 가능
@@ -594,17 +610,18 @@ export const ReactFlowClusterCanvas: React.FC<ReactFlowClusterCanvasProps> = ({
         </div>
       </div>
 
+<p className="text-xs px-3 py-2 text-slate-400">파선: 관리/API · 점선: 설정 관계 · 실선: 앱 트래픽 · 학습용 개념 배치</p>
       {/* React Flow Canvas */}
       <div className="flex-1 w-full h-full relative">
         <ReactFlow
-          nodes={nodes}
+          nodes={interactiveNodes}
+          onNodesChange={onNodesChange}
           edges={edges}
           nodeTypes={nodeTypes}
           fitView
           fitViewOptions={{ padding: 0.15 }}
           minZoom={0.3}
           maxZoom={1.8}
-          proOptions={{ hideAttribution: true }}
           className="bg-[#070D18]"
         >
           <Background color="#334155" gap={24} size={1.5} />

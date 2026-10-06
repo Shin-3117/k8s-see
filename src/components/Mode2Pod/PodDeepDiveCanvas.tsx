@@ -18,12 +18,14 @@ interface PodDeepDiveCanvasProps {
   currentStep: PodLifecycleStep;
   onSimulateDelete: () => void;
   onResetLifecycle: () => void;
+  showLifecycleActions?: boolean;
 }
 
 export const PodDeepDiveCanvas: React.FC<PodDeepDiveCanvasProps> = ({
   currentStep,
   onSimulateDelete,
-  onResetLifecycle
+  onResetLifecycle,
+  showLifecycleActions = true
 }) => {
   const getProbeBadge = (status: ProbeStatus, name: string) => {
     switch (status) {
@@ -67,7 +69,7 @@ export const PodDeepDiveCanvas: React.FC<PodDeepDiveCanvasProps> = ({
             <Box className="w-5 h-5" />
           </div>
           <div>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 flex-wrap">
               <h2 className="text-base font-black text-white tracking-wide">
                 Pod Runtime Deep-Dive 단면도
               </h2>
@@ -75,23 +77,23 @@ export const PodDeepDiveCanvas: React.FC<PodDeepDiveCanvasProps> = ({
                 className={`text-[10px] font-mono font-bold px-2.5 py-0.5 rounded-full uppercase tracking-wider border ${
                   currentStep.phase === 'Running'
                     ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30 animate-pulse'
-                    : currentStep.phase === 'Terminating'
+                    : currentStep.learningStage === 'Terminating'
                     ? 'bg-rose-500/20 text-rose-300 border-rose-500/30 animate-pulse'
                     : 'bg-amber-500/20 text-amber-300 border-amber-500/30'
                 }`}
               >
-                Phase: {currentStep.phase}
+                공식 phase: {currentStep.phase}
               </span>
             </div>
             <p className="text-[11px] text-slate-400">
-              파드 내부 Pause 컨테이너 격리 ➔ 리눅스 네임스페이스 & cgroups ➔ 3대 프로브
+              공유 IP · 포트 공간 · localhost · pause는 공유 환경 유지
             </p>
           </div>
         </div>
 
         {/* Action Buttons */}
-        <div className="flex items-center gap-2 self-end sm:self-auto">
-          {currentStep.phase !== 'Terminating' ? (
+        <div className={`${showLifecycleActions ? 'flex' : 'hidden'} items-center gap-2 self-end sm:self-auto`}>
+          {currentStep.learningStage !== 'Terminating' ? (
             <button
               onClick={onSimulateDelete}
               className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-rose-950/60 hover:bg-rose-900/80 text-rose-300 border border-rose-700/60 text-xs font-bold transition-all shadow-md active:scale-95"
@@ -111,10 +113,13 @@ export const PodDeepDiveCanvas: React.FC<PodDeepDiveCanvasProps> = ({
         </div>
       </div>
 
+      <dl className="grid grid-cols-2 sm:grid-cols-3 gap-2 mb-4 text-xs" aria-label="Pod 상태">
+        {[['학습 단계', currentStep.learningStage], ['Ready', String(currentStep.ready)], ['컨테이너 상태', currentStep.containerState], ['UID', currentStep.uid], ['restartCount', String(currentStep.restartCount)], ['kubectl STATUS', currentStep.displayStatus]].map(([name, value]) => <div key={name} className="bg-slate-900 rounded-lg p-2 min-w-0"><dt className="text-slate-500">{name}</dt><dd className="text-blue-200 break-words mt-1">{value}</dd></div>)}
+      </dl>
       {/* Main Grid: Pod Anatomy */}
       <div className="grid grid-cols-12 gap-4">
         {/* Left Side: Linux Kernel Isolation & cgroups (4 cols) */}
-        <div className="col-span-12 lg:col-span-4 flex flex-col gap-3">
+        <details className="col-span-12 order-last flex flex-col gap-3"><summary className="cursor-pointer text-sm text-slate-400 mb-3">심화: Linux namespaces · cgroups (PID 공유는 설정에 따라 다름)</summary>
           {/* Linux Namespaces */}
           <div className="bg-slate-900/80 rounded-xl border border-slate-800 p-3 shadow-inner">
             <div className="flex items-center gap-1.5 text-xs font-bold text-slate-200 mb-2">
@@ -151,17 +156,17 @@ export const PodDeepDiveCanvas: React.FC<PodDeepDiveCanvasProps> = ({
               ))}
             </div>
           </div>
-        </div>
+        </details>
 
         {/* Right Side: Pod Interior Containers, Network & Probes (8 cols) */}
-        <div className="col-span-12 lg:col-span-8 flex flex-col gap-3">
+        <div className="col-span-12 flex flex-col gap-3">
           {/* 1. Infrastructure Layer: Pause Container + CNI IP */}
           <div className={`rounded-xl border p-3 transition-all ${
             currentStep.containers.pause.status === 'running'
               ? 'bg-blue-950/40 border-blue-500/50 shadow-lg shadow-blue-500/10'
               : 'bg-slate-900/40 border-slate-800 opacity-60'
           }`}>
-            <div className="flex items-center justify-between mb-1.5">
+            <div className="flex items-center justify-between flex-wrap gap-2 mb-1.5">
               <div className="flex items-center gap-2">
                 <div className="w-5 h-5 rounded bg-blue-600/30 text-blue-300 flex items-center justify-center text-[10px] font-mono font-bold">
                   P
@@ -262,7 +267,7 @@ export const PodDeepDiveCanvas: React.FC<PodDeepDiveCanvasProps> = ({
                 <Radio className="w-4 h-4 text-emerald-400" />
                 <span>Kubelet 3대 프로브(Probe) 헬스체크 모니터</span>
               </div>
-              <span className="text-[10px] text-slate-500 font-mono">10s Interval</span>
+              <span className="text-[10px] text-slate-500 font-mono">설정된 주기</span>
             </div>
 
             <div className="flex items-center flex-wrap gap-2.5">
@@ -271,7 +276,7 @@ export const PodDeepDiveCanvas: React.FC<PodDeepDiveCanvasProps> = ({
               {getProbeBadge(currentStep.probes.liveness, 'Liveness Probe')}
             </div>
             <p className="text-[11px] text-slate-400 mt-2">
-              • <strong className="text-slate-300">Readiness Probe</strong> 통과 시 파드가 즉시 Service Endpoints에 등록되어 트래픽 수신을 개시합니다.
+              • <strong className="text-slate-300">Readiness Probe</strong> 성공은 Ready 조건에 반영되어 일반 Service 트래픽 대상이 될 수 있습니다. 전파 지연과 readiness gate도 고려합니다. Startup 성공 후 readiness·liveness는 각각 동작합니다.
             </p>
           </div>
         </div>

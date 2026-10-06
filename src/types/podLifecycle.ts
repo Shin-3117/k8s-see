@@ -1,4 +1,5 @@
-export type PodPhase = 
+export type PodPhase = 'Pending' | 'Running' | 'Succeeded' | 'Failed' | 'Unknown';
+export type PodLearningStage =
   | 'Pending'
   | 'SandboxCreating'
   | 'InitRunning'
@@ -11,7 +12,14 @@ export type ProbeStatus = 'idle' | 'checking' | 'success' | 'failed';
 
 export interface PodLifecycleStep {
   stepNumber: number;
+  id: string;
   phase: PodPhase;
+  learningStage: PodLearningStage | 'ReadinessFailed' | 'Restarting' | 'Completed' | 'Replaced' | 'CrashLoopBackOff' | 'Failed';
+  ready: boolean;
+  uid: string;
+  restartCount: number;
+  containerState: 'Waiting' | 'Running' | 'Terminated';
+  displayStatus: string;
   title: string;
   subTitle: string;
   description: string;

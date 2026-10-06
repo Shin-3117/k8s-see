@@ -4,6 +4,7 @@ import { Cloud, ArrowRight } from 'lucide-react';
 
 interface CloudControllerNodeData {
   isActive: boolean;
+  isCSI?: boolean;
   isHighlighted: boolean;
   isSelected: boolean;
   onClick: () => void;
@@ -26,11 +27,11 @@ export const CloudControllerNode: React.FC<{ data: CloudControllerNodeData }> = 
     >
       <div className="flex items-center gap-1.5 mb-1 text-sky-400">
         <Cloud className="w-4 h-4" />
-        <span className="text-[9px] font-mono bg-sky-500/20 px-1 py-0.2 rounded text-sky-300">c-c-m</span>
+        <span className="text-[9px] font-mono bg-sky-500/20 px-1 py-0.2 rounded text-sky-300">{data.isCSI ? 'CSI' : 'c-c-m'}</span>
       </div>
-      <span className="text-[11px] font-bold text-slate-200 text-center">Cloud Controller*</span>
+      <span className="text-[11px] font-bold text-slate-200 text-center">{data.isCSI ? 'CSI Controller' : 'Cloud Controller*'}</span>
       <span className="text-[8px] text-slate-500 mt-1 flex items-center gap-1">
-        <span>Cloud Provider API</span>
+        <span>{data.isCSI ? '별도 구성 · 배치 위치는 환경별' : 'Cloud Provider API'}</span>
         <ArrowRight className="w-2.5 h-2.5 opacity-60" />
       </span>
 

@@ -114,7 +114,7 @@ export const EtcdLiveViewer: React.FC<EtcdLiveViewerProps> = ({ etcdState, compa
           </div>
           <div>
             <div className="flex items-center gap-2">
-              <span className="font-bold text-slate-100 text-sm tracking-tight">etcd Live Key-Value Storage</span>
+              <span className="font-bold text-slate-100 text-sm tracking-tight">etcd 리소스 저장 예시</span>
               <span className="text-[10px] px-2 py-0.5 rounded-full bg-cyan-500/20 text-cyan-300 border border-cyan-500/30 font-semibold">
                 Single Source of Truth (SSOT)
               </span>
@@ -233,7 +233,7 @@ export const EtcdLiveViewer: React.FC<EtcdLiveViewerProps> = ({ etcdState, compa
           <div>
             <p className="font-bold text-slate-300 text-sm">아직 etcd에 기록된 리소스가 없습니다.</p>
             <p className="text-xs mt-1 text-slate-500 max-w-md">
-              매니페스트가 API Server의 인증/인가/어드미션을 통과하고 Raft 과반수 합의(Quorum)로 디스크에 커밋되면 실시간으로 이곳에 표시됩니다.
+              현재 단계의 리소스 상태를 보여주는 시뮬레이션 예시입니다. 고정 UID·revision·시간·로그는 실제 클러스터의 실시간 결과가 아닙니다.
             </p>
           </div>
         </div>

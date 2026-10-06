@@ -35,7 +35,7 @@ export const PlaybackBar: React.FC<PlaybackBarProps> = ({
         <button
           onClick={onReset}
           className="p-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white transition-colors"
-          title="처음으로 리셋"
+          title="현재 페이지 리셋" aria-label="현재 페이지 리셋"
         >
           <RotateCcw className="w-4 h-4" />
         </button>
@@ -44,7 +44,7 @@ export const PlaybackBar: React.FC<PlaybackBarProps> = ({
           onClick={onPrevStep}
           disabled={currentStepIndex === 0}
           className="p-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white disabled:opacity-40 disabled:hover:bg-slate-800 transition-colors"
-          title="이전 단계"
+          title="이전 단계" aria-label="이전 단계"
         >
           <SkipBack className="w-4 h-4" />
         </button>
@@ -74,7 +74,7 @@ export const PlaybackBar: React.FC<PlaybackBarProps> = ({
           onClick={onNextStep}
           disabled={currentStepIndex === totalSteps - 1}
           className="p-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white disabled:opacity-40 disabled:hover:bg-slate-800 transition-colors"
-          title="다음 단계"
+          title="다음 단계" aria-label="다음 단계"
         >
           <SkipForward className="w-4 h-4" />
         </button>
@@ -84,6 +84,8 @@ export const PlaybackBar: React.FC<PlaybackBarProps> = ({
           {[0.5, 1, 2].map((s) => (
             <button
               key={s}
+              aria-label={`재생 속도 ${s}배`}
+              aria-pressed={speed === s}
               onClick={() => onSpeedChange(s)}
               className={`px-2 py-1 rounded transition-colors ${
                 speed === s
@@ -106,6 +108,9 @@ export const PlaybackBar: React.FC<PlaybackBarProps> = ({
           return (
             <button
               key={idx}
+              aria-label={`단계 ${idx + 1}: ${title}`}
+              aria-current={isActive ? 'step' : undefined}
+              title={title}
               onClick={() => onStepSelect(idx)}
               className={`group flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[11px] font-medium transition-all whitespace-nowrap border ${
                 isActive

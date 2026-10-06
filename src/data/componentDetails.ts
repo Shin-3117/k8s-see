@@ -13,6 +13,14 @@ export interface ComponentDetailInfo {
 }
 
 export const COMPONENT_DETAILS: Record<K8sComponentId, ComponentDetailInfo> = {
+  csiController: {
+    id: 'csiController', name: 'CSI Controller / external-provisioner', category: 'Worker Node',
+    k8sRole: '외부 볼륨 생성·삭제·노드 연결 조정',
+    summary: 'cloud-controller-manager와 별도 구성입니다. CSI controller의 배치 위치는 클러스터 구성에 따르며 반드시 Control Plane 노드일 필요는 없습니다.',
+    deepDive: ['external-provisioner가 PVC와 StorageClass를 관찰하고 CSI 드라이버에 CreateVolume을 요청합니다.', 'WaitForFirstConsumer는 노드 후보·토폴로지를 고려한 볼륨 생성과 바인딩을 지원합니다.', '지원되는 드라이버에서 external-attacher와 CSI controller가 노드 Attach를 조정하고 kubelet·CSI node가 Mount를 수행합니다.'],
+    cliCommands: ['kubectl get storageclass', 'kubectl describe pvc mysql-data-pvc', 'kubectl get volumeattachments'],
+    configPaths: [], badgeColor: 'bg-amber-500',
+  },
   'developer': {
     id: 'developer',
     name: 'Developer (kubectl / CLI)',
@@ -36,8 +44,8 @@ export const COMPONENT_DETAILS: Record<K8sComponentId, ComponentDetailInfo> = {
     id: 'apiserver',
     name: 'API Server (kube-apiserver)',
     category: 'Control Plane',
-    k8sRole: '클러스터의 중앙 제어 관문 & 모든 통신의 허브',
-    summary: '쿠버네티스 클러스터의 모든 내/외부 요청이 거쳐 가는 유일한 진입점이며, etcd와 직접 통신할 수 있는 유일한 컴포넌트입니다.',
+    k8sRole: 'Kubernetes API 요청의 관문',
+    summary: 'Kubernetes API 요청을 검증하고 리소스의 사양과 상태를 etcd에 저장합니다. 앱 트래픽은 노드의 데이터 경로에서 전달되며 API Server를 통과하지 않습니다.',
     deepDive: [
       '1. 인증(Authentication): X.509 인증서, Bearer 토큰, OIDC 등으로 요청자의 신원을 확인합니다.',
       '2. 인가(Authorization): RBAC(Role-Based Access Control) 정책으로 리소스 조작 권한을 검증합니다.',
@@ -62,7 +70,7 @@ export const COMPONENT_DETAILS: Record<K8sComponentId, ComponentDetailInfo> = {
       'Raft 합의 알고리즘: 홀수 개(보통 3개 또는 5개) 노드로 클러스터를 구성하며 과반수(Quorum) 합의 시 커밋됩니다.',
       'MVCC (다중 버전 동시성 제어): 모든 변경 사항에 revision 번호를 부여하여 충돌 없이 변경 이력을 추적합니다.',
       'Watch 메커니즘: 키 공간의 변경 사항을 효율적으로 감시하여 API Server가 실시간 이벤트를 전파할 수 있게 합니다.',
-      '오직 kube-apiserver만이 etcd와 mTLS 보안 연결로 직접 통신합니다.'
+      'Kubernetes 구성 요소는 보통 API Server를 통해 리소스를 조회·변경합니다. 운영 도구나 관리자의 etcd 접근은 별도 권한과 구성이 필요합니다.'
     ],
     cliCommands: [
       'etcdctl endpoint health',
@@ -206,7 +214,7 @@ export const COMPONENT_DETAILS: Record<K8sComponentId, ComponentDetailInfo> = {
     k8sRole: '쿠버네티스 리소스 추상화 & 볼륨 마운트',
     summary: '파드에 주입된 ConfigMap, Secret, Persistent Volume 및 ReplicaSet 관리 레이블을 담고 있는 오브젝트 상태입니다.',
     deepDive: [
-      'ConfigMap / Secret: kubelet에 의해 메모리 tmpfs 파일 시스템으로 파드 컨테이너에 안전하게 마운트됩니다.',
+      'ConfigMap/Secret은 kubelet이 파일로 제공합니다. Secret 볼륨은 tmpfs 등 메모리 기반 저장을 사용하며 ConfigMap과 구현을 동일하게 일반화하지 않습니다.',
       'CSI (Container Storage Interface): 외부 스토리지(NFS, AWS EBS 등)를 워커 노드 디렉토리에 attach/mount 합니다.'
     ],
     cliCommands: [
@@ -222,7 +230,7 @@ export const COMPONENT_DETAILS: Record<K8sComponentId, ComponentDetailInfo> = {
     k8sRole: '쿠버네티스 리소스 추상화 & 볼륨 마운트',
     summary: '파드에 주입된 ConfigMap, Secret, Persistent Volume 및 ReplicaSet 관리 레이블을 담고 있는 오브젝트 상태입니다.',
     deepDive: [
-      'ConfigMap / Secret: kubelet에 의해 메모리 tmpfs 파일 시스템으로 파드 컨테이너에 안전하게 마운트됩니다.',
+      'ConfigMap/Secret은 kubelet이 파일로 제공합니다. Secret 볼륨은 tmpfs 등 메모리 기반 저장을 사용하며 ConfigMap과 구현을 동일하게 일반화하지 않습니다.',
       'CSI (Container Storage Interface): 외부 스토리지(NFS, AWS EBS 등)를 워커 노드 디렉토리에 attach/mount 합니다.'
     ],
     cliCommands: [
@@ -293,8 +301,8 @@ export const COMPONENT_DETAILS: Record<K8sComponentId, ComponentDetailInfo> = {
     deepDive: [
       'ec2:CreateVolume: StorageClass 매개변수(gp3, IOPS 3000, 125MB/s, KMS 암호화)에 부합하는 가상 디스크(EBS)를 생성합니다.',
       'ec2:AttachVolume: 파드가 스케줄링된 Worker Node(EC2 인스턴스)에 디바이스(/dev/xvdf 또는 /dev/nvme1n1)로 하드웨어 연결합니다.',
-      'CSI Specification: Kubernetes Control Plane(csi-provisioner, csi-attacher)과 Worker Node(aws-ebs-csi-node 데몬셋)의 gRPC 호출을 수신합니다.',
-      '데이터 영속성: Pod가 종료되거나 다른 노드로 이동해도 EBS 볼륨은 클라우드에 독립적으로 보존되어 데이터 무손실을 보장합니다.'
+      'CSI 사이드카는 CSI 드라이버를 gRPC로 호출하고, EBS 드라이버는 AWS API로 볼륨 생성·연결을 요청합니다.',
+      'Pod를 교체해도 PVC/PV가 유지되면 기록된 데이터를 재사용할 수 있습니다. PVC 삭제 후 회수 정책과 앱의 쓰기 완료 여부는 별도로 확인합니다.'
     ],
     cliCommands: [
       'aws ec2 describe-volumes --volume-ids vol-0a91f4b2',
@@ -312,15 +320,15 @@ export const COMPONENT_DETAILS: Record<K8sComponentId, ComponentDetailInfo> = {
     summary: '클러스터 외부에서 들어오는 HTTP/HTTPS 트래픽을 단일 엔드포인트(Port 80/443)에서 수신하여, 호스트(도메인) 및 URL 경로 규칙에 따라 적절한 백엔드 파드들로 스마트 라우팅합니다.',
     deepDive: [
       '1. 선언과 구현체의 분리: Ingress 리소스는 규칙 정의(메타데이터)일 뿐이며, Ingress Controller 데몬/디플로이먼트 파드가 실제 NGINX/Envoy 프록시 엔진을 구동합니다.',
-      '2. API Watch & Direct Pod Routing: EndpointSlice API를 감시하여 Service ClusterIP/iptables를 거치지 않고 실제 백엔드 파드 IP(예: 10.244.1.25:8080)로 직접 트래픽을 전송(Zero-Hop)합니다.',
+      '2. Controller가 Service·EndpointSlice를 감시합니다. ClusterIP 또는 Pod IP 직접 전달은 구현에 따라 다르며, 이 화면은 Pod IP 전달 예시입니다.',
       '3. TLS Termination (SSL 오프로딩): Kubernetes Secret(tls.crt, tls.key)을 로드하여 443 포트에서 암호화 핸드셰이크를 처리하고 백엔드 파드에는 복호화된 평문 HTTP를 전달합니다.',
-      '4. 무중단 동적 리로딩: Go 컨트롤러 템플릿 렌더링 및 Lua 모듈(lua_shared_dict)을 통해 파드 스케일링 시에도 무중단으로 업스트림 라우팅 테이블을 실시간 갱신합니다.'
+      '4. 프록시 설정 갱신: reload·동적 갱신 방식과 무중단 동작 조건은 제품·버전·설정에 따라 다릅니다.'
     ],
     cliCommands: [
       'kubectl get ingress -A',
       'kubectl describe ingress ecommerce-ingress',
       'kubectl logs -n ingress-nginx -l app.kubernetes.io/name=ingress-nginx -f',
-      'curl -k -v https://api.example.com/orders'
+      'curl -i https://api.example.com/orders'
     ],
     configPaths: ['/etc/nginx/nginx.conf', '/etc/ingress-controller/ssl'],
     badgeColor: 'bg-purple-600'

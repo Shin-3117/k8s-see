@@ -5,6 +5,7 @@ export type K8sComponentId =
   | 'scheduler'
   | 'controllerManager'
   | 'cloudControllerManager'
+  | 'csiController'
   | 'kubelet-1'
   | 'kubelet-2'
   | 'runtime-1'
@@ -23,7 +24,11 @@ export interface PodInstance {
   id: string;
   name: string;
   nodeId: 'worker-1' | 'worker-2';
-  status: PodStatus;
+  status: PodStatus; // Learning display status, separate from official podPhase
+  podPhase?: 'Pending' | 'Running' | 'Succeeded' | 'Failed' | 'Unknown';
+  learningStage?: string;
+  uid?: string;
+  containerState?: 'Waiting' | 'Running' | 'Terminated';
   ready: string; // e.g. "1/1"
   restarts: number;
   age: string;
@@ -36,6 +41,7 @@ export interface PacketPath {
   label: string;
   method?: string; // e.g. "POST /apis/apps/v1/deployments", "Raft Propose", "Binding"
   color?: string;
+  kind?: 'management' | 'traffic' | 'configuration';
 }
 
 export interface EtcdRecord {

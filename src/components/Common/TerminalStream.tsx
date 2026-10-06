@@ -11,7 +11,7 @@ interface TerminalStreamProps {
 
 export const TerminalStream: React.FC<TerminalStreamProps> = ({
   logs,
-  title = 'kubectl Terminal Stream'
+  title = '명령과 로그 · 시뮬레이션 예시'
 }) => {
   const [copiedIndex, setCopiedIndex] = useState<number | null>(null);
 
@@ -38,7 +38,7 @@ export const TerminalStream: React.FC<TerminalStreamProps> = ({
         </div>
 
         <span className="text-[10px] text-slate-500 bg-slate-950 px-2 py-0.5 rounded border border-slate-800">
-          bash / zsh
+          예시 출력
         </span>
       </div>
 
@@ -54,7 +54,7 @@ export const TerminalStream: React.FC<TerminalStreamProps> = ({
               </div>
               <button
                 onClick={() => handleCopy(log.command, idx)}
-                className="opacity-0 group-hover:opacity-100 p-1 hover:bg-slate-800 rounded text-slate-400 hover:text-white transition-opacity"
+                className="opacity-60 group-hover:opacity-100 focus:opacity-100 p-1 hover:bg-slate-800 rounded text-slate-400 hover:text-white transition-opacity"
                 title="명령어 복사"
               >
                 {copiedIndex === idx ? (
@@ -70,7 +70,7 @@ export const TerminalStream: React.FC<TerminalStreamProps> = ({
               {log.output.map((line, lIdx) => (
                 <div
                   key={lIdx}
-                  className={`whitespace-pre-wrap ${
+                  className={`whitespace-pre-wrap break-all ${
                     line.includes('Created') || line.includes('Ready') || line.includes('PASSED') || line.includes('Successfully')
                       ? 'text-emerald-300/90'
                       : line.includes('Pending') || line.includes('Warning')

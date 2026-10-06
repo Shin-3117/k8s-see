@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useRef } from 'react';
 import { ComponentDetailInfo, COMPONENT_DETAILS } from '../../data/componentDetails';
 import { K8sComponentId } from '../../types/pipeline';
 import { X, BookOpen, Terminal, CheckCircle2, FolderOpen } from 'lucide-react';
@@ -12,13 +12,19 @@ export const ComponentDetailModal: React.FC<ComponentDetailModalProps> = ({
   componentId,
   onClose
 }) => {
+  const dialogRef = useRef<HTMLDialogElement>(null);
+  useEffect(() => {
+    const dialog = dialogRef.current;
+    if (componentId && dialog) dialog.showModal();
+    return () => dialog?.close();
+  }, [componentId]);
   if (!componentId) return null;
 
   const info: ComponentDetailInfo = COMPONENT_DETAILS[componentId];
   if (!info) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm animate-in fade-in duration-200">
+    <dialog ref={dialogRef} onCancel={onClose} aria-labelledby="component-title" className="learning-dialog !p-0">
       <div className="bg-[#0F172A] w-full max-w-2xl rounded-2xl border-2 border-slate-700 shadow-2xl overflow-hidden flex flex-col max-h-[85vh]">
         {/* Header */}
         <div className="bg-slate-900 px-5 py-4 border-b border-slate-800 flex items-center justify-between">
@@ -26,7 +32,7 @@ export const ComponentDetailModal: React.FC<ComponentDetailModalProps> = ({
             <div className={`w-3 h-8 rounded-full ${info.badgeColor}`} />
             <div>
               <div className="flex items-center gap-2">
-                <h3 className="text-base font-black text-white">{info.name}</h3>
+                <h3 id="component-title" className="text-base font-black text-white">{info.name}</h3>
                 <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-slate-800 text-slate-300 border border-slate-700">
                   {info.category}
                 </span>
@@ -37,6 +43,8 @@ export const ComponentDetailModal: React.FC<ComponentDetailModalProps> = ({
 
           <button
             onClick={onClose}
+            aria-label="구성 요소 설명 닫기"
+            autoFocus
             className="p-1.5 rounded-lg hover:bg-slate-800 text-slate-400 hover:text-white transition-colors"
           >
             <X className="w-5 h-5" />
@@ -112,12 +120,14 @@ export const ComponentDetailModal: React.FC<ComponentDetailModalProps> = ({
         <div className="bg-slate-900 px-5 py-3 border-t border-slate-800 flex justify-end">
           <button
             onClick={onClose}
+            aria-label="구성 요소 설명 닫기"
+            autoFocus
             className="px-4 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold transition-colors"
           >
             닫기
           </button>
         </div>
       </div>
-    </div>
+    </dialog>
   );
 };

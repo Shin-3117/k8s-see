@@ -551,7 +551,7 @@ export const MODE4_STEPS: Mode4Step[] = [
           data: {
             metadata: { name: 'mysql-db-689f4b-x9z2l', namespace: 'default' },
             spec: { nodeName: 'worker-1' },
-            status: { phase: 'ContainerCreating', podIP: '10.244.1.42' }
+            status: { phase: 'Pending', podIP: '10.244.1.42' }
           }
         }
       ]

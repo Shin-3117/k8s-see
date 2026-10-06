@@ -3,7 +3,14 @@ import { PodLifecycleStep } from '../types/podLifecycle';
 export const MODE2_STEPS: PodLifecycleStep[] = [
   {
     stepNumber: 1,
+    id: 'pending',
     phase: 'Pending',
+    learningStage: 'Pending',
+    ready: false,
+    uid: 'pod-web-001',
+    restartCount: 0,
+    containerState: 'Waiting',
+    displayStatus: 'Pending',
     title: 'Pending: 스케줄링 완료 및 Pod Worker 할당',
     subTitle: 'Kubelet이 노드 자원을 예약하고 비동기 워커 스레드를 시작합니다',
     description: '스케줄러에 의해 이 워커 노드로 배정된 파드 스펙을 Kubelet이 수신했습니다. Kubelet은 메모리와 CPU 여유를 최종 확인하고, 파드 라이프사이클을 전담할 Pod Worker 고루틴을 생성합니다.',
@@ -50,11 +57,18 @@ export const MODE2_STEPS: PodLifecycleStep[] = [
   },
   {
     stepNumber: 2,
-    phase: 'SandboxCreating',
+    id: 'sandbox',
+    phase: 'Pending',
+    learningStage: 'SandboxCreating',
+    ready: false,
+    uid: 'pod-web-001',
+    restartCount: 0,
+    containerState: 'Waiting',
+    displayStatus: 'Pending',
     title: 'Sandbox 격리: Pause 컨테이너 기동 & CNI 네트워크 할당',
     subTitle: '파드 내 모든 컨테이너가 공유할 IP와 통신 네임스페이스를 생성합니다',
     description: 'CRI가 "Pause"라는 극도로 가벼운 인프라 컨테이너를 먼저 실행합니다. 리눅스 네트워크(Net)와 IPC 네임스페이스를 생성하고, CNI(Container Network Interface) 플러그인이 가상 veth 인터페이스를 연결하여 고유 파드 IP(10.244.1.14)를 할당합니다.',
-    deepDive: '쿠버네티스의 "동일 파드 내 컨테이너 간 localhost 통신"은 바로 이 Pause 컨테이너의 네트워크 네임스페이스를 공유(Network Namespace Sharing)하기 때문에 가능합니다. CSI 플러그인은 요청된 볼륨 디렉토리를 호스트 디스크에 마운트합니다.',
+    deepDive: '쿠버네티스의 "동일 파드 내 컨테이너 간 localhost 통신"은 바로 이 Pause 컨테이너의 네트워크 네임스페이스를 공유(Network Namespace Sharing)하기 때문에 가능합니다. ConfigMap/Secret 볼륨은 kubelet이 파일로 제공합니다. 외부 CSI 저장소의 생성·Attach 과정과 구분합니다. pause는 패킷을 중계하지 않습니다.',
     linuxKernelDetails: {
       namespaces: [
         { name: 'Net', status: '격리 완료 (veth0 ➔ br0)', desc: 'Pod IP 10.244.1.14 부여됨' },
@@ -96,7 +110,14 @@ export const MODE2_STEPS: PodLifecycleStep[] = [
   },
   {
     stepNumber: 3,
-    phase: 'InitRunning',
+    id: 'init',
+    phase: 'Pending',
+    learningStage: 'InitRunning',
+    ready: false,
+    uid: 'pod-web-001',
+    restartCount: 0,
+    containerState: 'Waiting',
+    displayStatus: 'Pending',
     title: 'Init Containers: 사전 준비 작업 순차 실행',
     subTitle: '메인 앱이 뜨기 전 필수 선행 작업(DB 연결 대기, 설정 파일 생성)을 완료합니다',
     description: '파드 스펙에 정의된 initContainers가 명시된 순서대로 하나씩 실행됩니다. 모든 Init 컨테이너가 exit code 0(정상 종료)으로 끝나야만 비로소 메인 애플리케이션 컨테이너를 기동할 수 있습니다.',
@@ -128,22 +149,29 @@ export const MODE2_STEPS: PodLifecycleStep[] = [
       'I0911 13:20:02.010 containerd: CreateContainer "init-db-check" from busybox:1.36',
       'I0911 13:20:02.450 init-db-check: Checking database connection at db-service:5432...',
       'I0911 13:20:03.100 init-db-check: Connection established! Writing config cache...',
-      'I0911 13:20:03.300 containerd: Container "init-db-check" exited with status 0'
+      'I0911 13:20:03.300 init-db-check: Preparing to exit after successful checks'
     ],
     describeOutput: [
       'Status:       Pending',
       'Init Containers:',
       '  init-db-check:',
       '    Container ID:  containerd://8f2a1b...',
-      '    State:         Terminated (Completed, Exit Code: 0)',
+      '    State:         Running',
       'Conditions:',
       '  Type           Status',
-      '  Initialized    True'
+      '  Initialized    False'
     ]
   },
   {
     stepNumber: 4,
-    phase: 'ContainerCreating',
+    id: 'app-start',
+    phase: 'Running',
+    learningStage: 'ContainerCreating',
+    ready: false,
+    uid: 'pod-web-001',
+    restartCount: 0,
+    containerState: 'Running',
+    displayStatus: 'Running',
     title: 'ContainerCreating: 메인 컨테이너 이미지 Pull & 기동',
     subTitle: 'CRI가 OCI 컨테이너 프로세스를 fork/exec하고 cgroups 자원을 제약합니다',
     description: 'Init 컨테이너가 성공했으므로 메인 컨테이너(web-server)를 시작합니다. 이미지(nginx:1.25)가 노드에 없으면 원격 레지스트리에서 다운로드하고, 리눅스 cgroups(CPU 0.5코어, Mem 512MB) 제약 아래에서 메인 프로세스(nginx 마스터)를 실행합니다.',
@@ -181,7 +209,7 @@ export const MODE2_STEPS: PodLifecycleStep[] = [
       'I0911 13:20:05.412 web-server: 2026/09/11 13:20:05 [notice] 1#1: start worker processes'
     ],
     describeOutput: [
-      'Status:       ContainerCreating ➔ Running',
+      'Status:       Running',
       'Containers:',
       '  web-server:',
       '    Container ID:   containerd://192a8c...',
@@ -192,11 +220,18 @@ export const MODE2_STEPS: PodLifecycleStep[] = [
   },
   {
     stepNumber: 5,
+    id: 'ready',
     phase: 'Running',
+    learningStage: 'Running',
+    ready: true,
+    uid: 'pod-web-001',
+    restartCount: 0,
+    containerState: 'Running',
+    displayStatus: 'Running',
     title: 'Running: 3대 프로브(Probe) 헬스체크 & 트래픽 투입',
-    subTitle: 'Startup ➔ Readiness 통과 ➔ 서비스 투입 & Liveness 지속 모니터링',
-    description: 'Kubelet이 3대 프로브를 가동합니다. 1) Startup Probe가 통과하여 앱이 온전히 떴음을 확인하고, 2) Readiness Probe가 200 OK를 반환하여 Service Endpoint에 파드 IP를 추가합니다. 3) Liveness Probe가 백그라운드에서 주기적으로 심박수를 확인합니다.',
-    deepDive: 'Readiness Probe가 실패하면 파드가 재시작되지는 않지만 Service의 Endpoint 목록에서 즉시 제거되어 사용자에게 에러 페이지가 노출되지 않도록 보호합니다. Liveness Probe가 연속 실패하면 Kubelet이 컨테이너를 kill하고 재시작합니다.',
+    subTitle: 'Startup 성공 후 Readiness와 Liveness가 각각 동작합니다',
+    description: 'Kubelet이 3대 프로브를 가동합니다. Startup Probe가 성공하면 Readiness와 Liveness가 각각의 설정에 따라 동작합니다. Readiness 결과가 Ready 조건에 반영되면 일반 Service 트래픽 대상이 될 수 있습니다. Running만으로 요청 처리 가능 여부를 판단하지 않습니다.',
+    deepDive: 'Readiness Probe가 실패하면 파드가 재시작되지는 않지만 일반 Service의 준비된 트래픽 대상에서 제외됩니다. EndpointSlice와 전달 규칙 반영에는 전파 지연이 있을 수 있습니다. Liveness Probe가 연속 실패하면 Kubelet이 컨테이너를 kill하고 재시작합니다.',
     linuxKernelDetails: {
       namespaces: [
         { name: 'Net', status: 'Active (Traffic Flowing)', desc: '10.244.1.14:80 ➔ 200 OK' },
@@ -239,11 +274,18 @@ export const MODE2_STEPS: PodLifecycleStep[] = [
   },
   {
     stepNumber: 6,
-    phase: 'Terminating',
+    id: 'terminating',
+    phase: 'Running',
+    learningStage: 'Terminating',
+    ready: false,
+    uid: 'pod-web-001',
+    restartCount: 0,
+    containerState: 'Running',
+    displayStatus: 'Terminating',
     title: 'Terminating: Graceful Shutdown (우아한 무중단 종료)',
-    subTitle: '트래픽 차단 ➔ preStop 훅 ➔ SIGTERM (30초 대기) ➔ SIGKILL',
-    description: '사용자가 `kubectl delete pod`를 실행하거나 새 버전 롤아웃 시 종료 절차가 시작됩니다. 1) Service Endpoints에서 즉시 제외되어 새 트래픽이 차단되고, 2) preStop 훅이 실행되며, 3) SIGTERM 신호로 기존 요청을 마무리할 시간(Grace Period 30초)을 줍니다.',
-    deepDive: '만약 30초(terminationGracePeriodSeconds) 내에 프로세스가 스스로 종료되지 않으면, Kubelet은 최종 수단인 `SIGKILL(9)`을 보내 프로세스를 강제 사살합니다. 그 후 CNI 가상 IP 반환, 볼륨 언마운트가 이루어지고 etcd에서 파드 레코드가 완전히 삭제됩니다.',
+    subTitle: 'EndpointSlice 갱신과 노드 종료는 병행 · 기본 30초 유예에 preStop 포함',
+    description: '사용자가 `kubectl delete pod`를 실행하거나 새 버전 롤아웃 시 종료 절차가 시작됩니다. EndpointSlice의 트래픽 대상 변경과 kubelet의 종료 처리는 병행됩니다. 설정된 preStop이 실행되고 런타임이 보통 SIGTERM을 전달합니다. 기본 30초 유예에는 preStop 실행 시간이 포함되며 전파 지연이 있을 수 있습니다.',
+    deepDive: '남은 프로세스만 유예 시간 종료 후 SIGKILL로 강제 종료합니다. 정상 종료하면 SIGKILL은 필요 없습니다. 컨테이너 종료 후 sandbox·네트워크·볼륨을 정리하며 finalizer 등의 조건에 따라 API 객체 삭제가 지연될 수 있습니다.',
     linuxKernelDetails: {
       namespaces: [
         { name: 'Net', status: 'Endpoint 해제됨', desc: '인바운드 신규 연결 차단, 기존 소켓 FIN 대기' },
@@ -265,7 +307,7 @@ export const MODE2_STEPS: PodLifecycleStep[] = [
       ],
       main: { name: 'web-server', status: 'terminating', image: 'nginx:1.25' }
     },
-    volumeStatus: { name: 'web-config', type: 'ConfigMap', mounted: false },
+    volumeStatus: { name: 'web-config', type: 'ConfigMap', mounted: true },
     terminalLogs: [
       'I0911 13:20:30.001 apiserver: DELETE /api/v1/namespaces/default/pods/web-server-794d6c-4k8x1',
       'I0911 13:20:30.020 endpoint_slice_controller: Removed 10.244.1.14:80 from Service "web-service"',
@@ -274,10 +316,10 @@ export const MODE2_STEPS: PodLifecycleStep[] = [
       'I0911 13:20:31.050 web-server: 2026/09/11 13:20:31 [notice] 1#1: signal 15 (SIGTERM) received, exiting',
       'I0911 13:20:31.400 containerd: Container "web-server" exited with status 0',
       'I0911 13:20:31.600 cni-calico: DelCmd: Released IP 10.244.1.14/24',
-      'I0911 13:20:31.800 kubelet: Pod successfully deleted from node and etcd'
+      'I0911 13:20:31.800 kubelet: node cleanup completed; API deletion reconciles separately'
     ],
     describeOutput: [
-      'Status:       Terminating',
+      'Status:       Running (kubectl STATUS: Terminating)',
       'Deletion Timestamp:  2026-09-11T13:20:30Z',
       'Termination Grace Period: 30s',
       'Conditions:',

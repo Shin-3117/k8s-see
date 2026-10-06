@@ -141,7 +141,7 @@ export const PvcYamlViewer: React.FC<PvcYamlViewerProps> = ({
     <div className="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden shadow-2xl flex flex-col h-full">
       {/* Header Bar with Tabs */}
       <div className="bg-slate-950 px-4 py-2.5 border-b border-slate-800 flex items-center justify-between flex-wrap gap-2">
-        <div className="flex items-center gap-1.5 bg-slate-900 p-1 rounded-xl border border-slate-800">
+        <div className="flex flex-wrap items-center gap-1.5 bg-slate-900 p-1 rounded-xl border border-slate-800">
           <button
             onClick={() => setActiveTab('storageclass')}
             className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold transition-all ${
@@ -201,7 +201,7 @@ export const PvcYamlViewer: React.FC<PvcYamlViewerProps> = ({
         </div>
 
         {/* Copy Button & CSI Status */}
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-amber-500/10 text-amber-300 border border-amber-500/30 hidden sm:inline">
             Driver: ebs.csi.aws.com
           </span>
@@ -235,15 +235,15 @@ export const PvcYamlViewer: React.FC<PvcYamlViewerProps> = ({
       </div>
 
       {/* CSI Binding Info Banner */}
-      <div className="bg-slate-950/70 border-b border-slate-800/80 px-4 py-2 text-[11px] text-slate-300 flex items-center justify-between">
-        <div className="flex items-center gap-2">
+      <div className="bg-slate-950/70 border-b border-slate-800/80 px-4 py-2 text-[11px] text-slate-300 flex flex-wrap gap-2 items-center justify-between">
+        <div className="flex flex-wrap items-center gap-2">
           <span className="text-amber-400 font-bold">🔗 CSI Dynamic Binding:</span>
           <span className="font-mono text-cyan-300">
-            StorageClass(gp3) ➔ PVC(20Gi) ➔ AWS EBS(vol-0a91f4b2) ➔ Pod(/var/lib/mysql)
+            Pod → PVC → PV → EBS · StorageClass와 CSI가 연결을 구성
           </span>
         </div>
         <span className="text-[10px] text-slate-400 font-mono">
-          Phase: {currentStepPhase}
+          학습 단계: {currentStepPhase}
         </span>
       </div>
 

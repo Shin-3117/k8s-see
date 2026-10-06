@@ -27,12 +27,7 @@ export const AwsCloudNode: React.FC<{ data: AwsCloudNodeData }> = ({ data }) => 
     borderClass = 'border-amber-400 bg-slate-900 text-amber-200 ring-2 ring-amber-400/60 animate-pulse shadow-2xl shadow-amber-500/40';
   }
 
-  const vol = data.volumeState || {
-    volumeId: 'vol-0a91f4b2',
-    size: '20 GiB',
-    type: 'gp3',
-    status: 'attached'
-  };
+  const vol = data.volumeState;
 
   return (
     <div
@@ -83,12 +78,12 @@ export const AwsCloudNode: React.FC<{ data: AwsCloudNodeData }> = ({ data }) => 
           </div>
         </div>
         <span className="text-[8px] px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-300 font-mono border border-amber-500/30 shrink-0">
-          CSI API
+          AWS API
         </span>
       </div>
 
       {/* Elastic Block Store (EBS) Volume Status Card */}
-      <div className="bg-slate-950/80 rounded-xl p-2 border border-slate-800 space-y-1.5">
+      {vol ? <div className="bg-slate-950/80 rounded-xl p-2 border border-slate-800 space-y-1.5">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-1 text-[10px] font-bold text-slate-200">
             <HardDrive className="w-3.5 h-3.5 text-amber-400" />
@@ -140,7 +135,7 @@ export const AwsCloudNode: React.FC<{ data: AwsCloudNodeData }> = ({ data }) => 
             KMS Encrypted
           </span>
         </div>
-      </div>
+      </div> : <p className="text-xs text-slate-400 p-3">현재 외부 볼륨 없음 · PVC/회수 상태 확인</p>}
     </div>
   );
 };

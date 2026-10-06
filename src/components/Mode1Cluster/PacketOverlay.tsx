@@ -10,6 +10,7 @@ const COMPONENT_COORDINATES: Record<K8sComponentId, { x: number; y: number }> = 
   'developer': { x: 70, y: 320 },
   'apiserver': { x: 310, y: 320 },
   'etcd': { x: 260, y: 140 },
+  'csiController': { x: 420, y: 140 },
   'cloudControllerManager': { x: 420, y: 140 },
   'scheduler': { x: 250, y: 500 },
   'controllerManager': { x: 390, y: 500 },

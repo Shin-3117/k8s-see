@@ -4,6 +4,7 @@ import { PodInstance, K8sComponentId } from '../../../types/pipeline';
 import { Network, Box, FolderGit2 } from 'lucide-react';
 
 interface WorkerNodeCardData {
+  showStorage?: boolean;
   nodeId: 'worker-1' | 'worker-2';
   nodeName: string;
   nodeIp: string;
@@ -169,6 +170,8 @@ export const WorkerNodeCard: React.FC<{ data: WorkerNodeCardData }> = ({ data })
         </div>
       </div>
 
+      <p className="text-[8px] text-slate-500 mb-1">아래 Deployment·Service는 노드 실행 프로세스가 아닙니다.</p>
+      {data.showStorage ? <p className="text-[9px] text-amber-300 mb-1">CSI node · kubelet과 볼륨 준비 / Mount</p> : null}
       {/* Row 2: Objects + kube-proxy */}
       <div className="grid grid-cols-12 gap-2">
         <div
@@ -179,7 +182,7 @@ export const WorkerNodeCard: React.FC<{ data: WorkerNodeCardData }> = ({ data })
         >
           <div className="flex items-center gap-1">
             <FolderGit2 className="w-3 h-3 text-teal-400" />
-            <span className="text-[9px] font-bold text-slate-300">Objects*</span>
+            <span className="text-[9px] font-bold text-slate-300">관련 API 리소스*</span>
           </div>
           <div className="flex gap-0.5">
             <span className="text-[7px] px-1 rounded bg-teal-900/60 text-teal-300 font-mono">deploy</span>
