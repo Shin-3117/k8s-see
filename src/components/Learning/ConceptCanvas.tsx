@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import {
   ReactFlow,
   Background,
@@ -8,9 +8,11 @@ import {
   Node,
   Edge,
   MarkerType,
+  ReactFlowInstance,
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
 import { LearningPageId, pageHref, sourceUrl } from "../../data/learningPages";
+import { ConceptNode } from "./ConceptNode";
 interface Concept {
   id: string;
   label: string;
@@ -229,52 +231,126 @@ function Boundary({ data }: { data: { label: string } }) {
     </div>
   );
 }
-const NODE_TYPES = { boundary: Boundary };
+const NODE_TYPES = { boundary: Boundary, concept: ConceptNode };
+// Each graph follows its relationships rather than the order of the concept list.
+const POSITIONS: Record<
+  keyof typeof definitions,
+  Record<string, { x: number; y: number }>
+> = {
+  overview: {
+    api: { x: 260, y: 240 },
+    etcd: { x: 20, y: 240 },
+    scheduler: { x: 260, y: 65 },
+    controller: { x: 260, y: 415 },
+    kubelet: { x: 20, y: 240 },
+    runtime: { x: 260, y: 240 },
+    pod: { x: 500, y: 130 },
+    cni: { x: 500, y: 350 },
+    dns: { x: 260, y: 65 },
+    proxy: { x: 20, y: 415 },
+  },
+  networking: {
+    client: { x: 370, y: 30 },
+    dns: { x: 30, y: 30 },
+    service: { x: 370, y: 240 },
+    path: { x: 370, y: 450 },
+    rules: { x: 30, y: 450 },
+    cni: { x: 710, y: 450 },
+    a: { x: 200, y: 660 },
+    b: { x: 540, y: 660 },
+  },
+  resources: {
+    deployment: { x: 370, y: 30 },
+    replicaset: { x: 370, y: 240 },
+    pod: { x: 370, y: 450 },
+    config: { x: 30, y: 450 },
+    service: { x: 710, y: 450 },
+    sa: { x: 710, y: 240 },
+    rbac: { x: 710, y: 30 },
+    namespace: { x: 30, y: 240 },
+    pvc: { x: 370, y: 660 },
+  },
+};
+type Side =
+  | "top"
+  | "right"
+  | "bottom"
+  | "left"
+  | "right-low"
+  | "right-high"
+  | "top-right";
+const PORTS: Record<keyof typeof definitions, [Side, Side][]> = {
+  overview: [
+    ["left", "right"],
+    ["bottom", "top"],
+    ["top", "bottom"],
+    ["right", "left"],
+    ["right", "left"],
+    ["right-high", "left"],
+    ["right-low", "left"],
+    ["right-low", "left"],
+  ],
+  networking: [
+    ["left", "right"],
+    ["top", "top"],
+    ["bottom", "top"],
+    ["bottom", "top"],
+    ["right", "left"],
+    ["left", "right"],
+    ["bottom", "top"],
+    ["bottom", "top"],
+  ],
+  resources: [
+    ["bottom", "top"],
+    ["bottom", "top"],
+    ["right", "left"],
+    ["left", "right"],
+    ["bottom", "top-right"],
+    ["bottom", "top"],
+    ["bottom", "top"],
+    ["bottom", "top"],
+  ],
+};
 function template(variant: keyof typeof definitions): Node[] {
-  const nodes: Node[] = definitions[variant].map((c, i) => ({
+  const nodes: Node[] = definitions[variant].map((c) => ({
     id: c.id,
-    position: { x: (i % 3) * 260, y: Math.floor(i / 3) * 145 },
+    type: "concept",
+    position: POSITIONS[variant][c.id],
     data: { label: c.label },
     style: {
-      background: "#0f172a",
-      color: "#e2e8f0",
-      border: "1px solid #475569",
-      borderRadius: 12,
-      width: 220,
-      padding: 18,
+      width: variant === "overview" ? 200 : 220,
     },
   }));
-  if (variant === "overview") {
-    const group = (id: string, label: string, x: number): Node => ({
-      id,
-      type: "boundary",
-      position: { x, y: 0 },
-      data: { label },
-      style: {
-        width: 490,
-        height: 475,
-        background: "#1e293b44",
-        border: "1px dashed #64748b",
-        color: "#cbd5e1",
-        padding: 10,
-      },
-    });
-    return [
-      group("control-plane", "Control Plane · 상태 관리", 0),
-      group("worker", "Worker Node · 실행 / 네트워크", 530),
-      ...nodes.map((n, i) => ({
-        ...n,
-        parentId: i < 4 ? "control-plane" : "worker",
-        extent: "parent" as const,
-        position: {
-          x: ((i < 4 ? i : i - 4) % 2) * 235 + 15,
-          y: Math.floor((i < 4 ? i : i - 4) / 2) * 105 + 45,
-        },
-        style: { ...n.style, width: 215, padding: 12 },
-      })),
-    ];
-  }
-  return nodes;
+  if (variant !== "overview") return nodes;
+  const group = (
+    id: string,
+    label: string,
+    x: number,
+    width: number,
+  ): Node => ({
+    id,
+    type: "boundary",
+    position: { x, y: 0 },
+    data: { label },
+    draggable: false,
+    selectable: false,
+    style: {
+      width,
+      height: 525,
+      background: "#1e293b44",
+      border: "1px dashed #64748b",
+      borderRadius: 12,
+    },
+  });
+  return [
+    group("control-plane", "Control Plane · 상태 관리", 0, 500),
+    group("worker", "Worker Node · 실행 / 네트워크", 570, 740),
+    ...nodes.map((n, i) => ({
+      ...n,
+      parentId: i < 4 ? "control-plane" : "worker",
+      extent: "parent" as const,
+    })),
+  ];
 }
 const EMPTY_ACTIVE: string[] = [];
 export function ConceptCanvas({
@@ -285,24 +361,46 @@ export function ConceptCanvas({
   active?: string[];
 }) {
   const [nodes, setNodes, onNodesChange] = useNodesState(template(variant));
+  const flowRef = useRef<ReactFlowInstance | null>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    let frame = 0;
+    const observer = new ResizeObserver(() => {
+      cancelAnimationFrame(frame);
+      frame = requestAnimationFrame(() =>
+        flowRef.current?.fitView({
+          padding: variant === "overview" ? 0.08 : 0.18,
+        }),
+      );
+    });
+    if (containerRef.current) observer.observe(containerRef.current);
+    return () => {
+      observer.disconnect();
+      cancelAnimationFrame(frame);
+    };
+  }, [variant]);
   const [selected, setSelected] = useState(definitions[variant][0]);
   useEffect(() => {
     setNodes((current) =>
       current.map((n) => ({
         ...n,
-        style: {
-          ...n.style,
-          borderColor: active.includes(n.id) ? "#60a5fa" : "#475569",
-          boxShadow: active.includes(n.id) ? "0 0 15px #2563eb55" : undefined,
+        data: {
+          ...n.data,
+          active: active.includes(n.id),
+          selected: selected.id === n.id,
         },
       })),
     );
-  }, [active, setNodes]);
+  }, [active, selected.id, setNodes]);
   const edges: Edge[] = connections[variant].map(
     ([source, target, label, dashed], i) => ({
       id: `relation-${i}`,
       source,
       target,
+      sourceHandle: `out-${PORTS[variant][i][0]}`,
+      targetHandle: `in-${PORTS[variant][i][1]}`,
+      type: "smoothstep",
+      pathOptions: { offset: 35, borderRadius: 12 },
       label,
       animated:
         active.includes(source) &&
@@ -317,10 +415,16 @@ export function ConceptCanvas({
   );
   return (
     <section className="space-y-3 min-w-0">
-      <div className="h-[430px] sm:h-[510px] rounded-xl border border-slate-700 overflow-hidden">
+      <div
+        ref={containerRef}
+        className="h-[480px] sm:h-[640px] rounded-xl border border-slate-700 overflow-hidden"
+      >
         <ReactFlow
           nodes={nodes}
           edges={edges}
+          onInit={(instance) => {
+            flowRef.current = instance;
+          }}
           nodeTypes={NODE_TYPES}
           onNodesChange={onNodesChange}
           onNodeClick={(_, node) => {
@@ -328,12 +432,16 @@ export function ConceptCanvas({
             if (found) setSelected(found);
           }}
           fitView
+          fitViewOptions={{ padding: variant === "overview" ? 0.08 : 0.18 }}
           minZoom={0.2}
           maxZoom={2}
         >
           <Background color="#334155" />
           <Controls />
           <MiniMap
+            position="bottom-left"
+            className="hidden sm:block"
+            style={{ width: 110, height: 66, left: 45 }}
             pannable
             zoomable
             nodeColor="#334155"
