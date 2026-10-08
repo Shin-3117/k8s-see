@@ -48,6 +48,7 @@ const pages = [
   "pod-internals",
   "service-networking",
   "ingress",
+  "cert-manager-ingress",
   "resource-relations",
   "configmap-secret",
   "volume-types",
@@ -89,7 +90,7 @@ try {
       if (
         (width === 1440 && page === "overview") ||
         (width === 390 &&
-          ["ingress", "persistent-storage", "pod-lifecycle"].includes(page))
+          ["ingress", "cert-manager-ingress", "persistent-storage", "pod-lifecycle"].includes(page))
       )
         command(
           "screenshot",
@@ -141,6 +142,36 @@ try {
   go("configmap-secret");
   assert.match(current().step, /현재 단계 6\/6/);
   console.log("PASS: ConfigMap/Secret storage, env/file updates and page state");
+
+  go("cert-manager-ingress");
+  assert.match(current().heading, /cert-manager 기반 Ingress 생성/);
+  click('button[aria-label^="단계 6:"]');
+  assert.match(evaluate('document.querySelector("[data-testid=certificate-tls-state]").innerText'), /준비 전/);
+  click('button[aria-label^="단계 7:"]');
+  assert.match(evaluate('document.querySelector("[data-testid=certificate-tls-state]").innerText'), /준비 완료/);
+  click('button[aria-label^="단계 9:"]');
+  go("ingress");
+  go("cert-manager-ingress");
+  assert.match(current().step, /현재 단계 9\/9/);
+  click('button[aria-label="현재 페이지 리셋"]');
+  assert.match(current().step, /현재 단계 1\/9/);
+  click('button[aria-label="재생 속도 2배"]');
+  command("find", "role", "button", "click", "--name", "자동 재생");
+  command("wait", "1800");
+  assert.match(current().step, /현재 단계 2\/9/);
+  go("ingress");
+  command("wait", "1800");
+  go("cert-manager-ingress");
+  assert.match(current().step, /현재 단계 2\/9.*일시정지/);
+  for (const [condition, total] of [["no-cert-manager", 1], ["issuer-not-ready", 2], ["http01-failed", 6]]) {
+    select("인증서 발급 조건", condition);
+    click(`button[aria-label^="단계 ${total}:"]`);
+    assert.match(evaluate('document.querySelector("[data-testid=certificate-tls-state]").innerText'), /준비 전/);
+    assert.match(current().step, new RegExp(`현재 단계 ${total}/${total}`));
+  }
+  select("인증서 발급 조건", "normal");
+  assert.match(current().step, /현재 단계 1\/9/);
+  console.log("PASS: cert-manager validation, TLS readiness, renewal, failure branches and playback state");
 
   go("volume-types");
   click('button[aria-label^="단계 3:"]');

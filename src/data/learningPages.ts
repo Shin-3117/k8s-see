@@ -66,6 +66,17 @@ export const LEARNING_PAGES = [
       "/orders와 /products는 서로 다른 요청입니다. TLS 종료와 백엔드 연결 방식은 구현에 따라 달라집니다.",
   },
   {
+    id: "cert-manager-ingress",
+    title: "cert-manager 기반 Ingress 생성",
+    question: "HTTPS 인증서는 누가 발급받고 Ingress에 어떻게 연결할까?",
+    summary:
+      "cert-manager가 인증서 발급과 갱신을 자동화합니다. Let’s Encrypt의 도메인 검증을 통과하면 TLS Secret을 저장하고, Ingress Controller가 이 인증서로 HTTPS 연결을 처리합니다.",
+    guide: "cert-manager와 HTTPS 인증서 자동 발급",
+    source: "https://cert-manager.io/docs/usage/ingress/",
+    takeaway:
+      "ClusterIssuer → Ingress → Certificate → 도메인 검증 → TLS Secret → HTTPS 순서입니다. 인증서 발급·갱신은 cert-manager, TLS 종료와 앱 전달은 Ingress Controller가 담당합니다.",
+  },
+  {
     id: "resource-relations",
     title: "주요 리소스 관계",
     question: "설정·Namespace·권한은 Pod와 어떻게 연결될까?",
@@ -125,7 +136,7 @@ export type LearningPageId = (typeof LEARNING_PAGES)[number]["id"];
 export type LearningPage = (typeof LEARNING_PAGES)[number];
 export const pageHref = (id: LearningPageId) => `#/learn/${id}`;
 export const sourceUrl = (path: string) =>
-  `https://kubernetes.io/docs/concepts/${path}/`;
+  path.startsWith("https://") ? path : `https://kubernetes.io/docs/concepts/${path}/`;
 export function pageFromHash(hash: string): LearningPageId {
   const id = hash.replace(/^#\/learn\//, "");
   return LEARNING_PAGES.find((page) => page.id === id)?.id ?? "overview";

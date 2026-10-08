@@ -31,7 +31,7 @@ export const PlaybackBar: React.FC<PlaybackBarProps> = ({
   return (
     <div className="bg-[#0F172A] rounded-xl border border-slate-800 p-3 shadow-xl flex flex-col md:flex-row items-center justify-between gap-3">
       {/* Control Buttons */}
-      <div className="flex items-center gap-1.5">
+      <div className="flex shrink-0 items-center gap-1.5">
         <button
           onClick={onReset}
           className="p-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white transition-colors"
@@ -100,7 +100,7 @@ export const PlaybackBar: React.FC<PlaybackBarProps> = ({
       </div>
 
       {/* Interactive Timeline Stepper */}
-      <div className="flex items-center gap-1 overflow-x-auto max-w-full py-1">
+      <div className="flex min-w-0 items-center gap-1 overflow-x-auto max-w-full py-1">
         {stepTitles.map((title, idx) => {
           const isActive = idx === currentStepIndex;
           const isPassed = idx < currentStepIndex;

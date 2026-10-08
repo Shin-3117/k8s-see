@@ -1,5 +1,15 @@
 # 학습 페이지 구현 검증
 
+## cert-manager Ingress 페이지 추가 검증 (2026-10-08)
+
+- Ingress 학습 다음에 `#/learn/cert-manager-ingress`를 추가했다. 전체 목차는 12개 페이지이며 이전·다음 학습으로 연결된다.
+- ClusterIssuer·Ingress·Certificate·ACME 요청·HTTP-01·TLS Secret·HTTPS·갱신을 9단계로 제공한다. 구성도와 구성 요소 설명, 복사 가능한 YAML·명령, staging에서 production으로 전환하는 방법을 포함한다.
+- cert-manager 미설치, ClusterIssuer 준비 실패, HTTP-01 검증 실패를 선택하면 TLS Secret 준비 전에 멈춘다. staging 인증서의 공개 신뢰 경고와 Controller의 TLS 종료 역할을 구분한다.
+- `npm run build`와 `npm test` 18개 통과. 참조 이름·도메인·Namespace 연결, 검증 전 Secret 미생성, 갱신 시 Secret 이름 유지와 실패 분기의 정상 시나리오 비변경을 확인했다. 기존 번들 크기 경고는 남아 있다.
+- `npm run test:browser` 통과: 12개 페이지 × 1440·1024·390px, 상세 펼침, 학습 이동·주소·이력·새로고침, 상태 복원, 기존 실패 예시를 검증했다. 새 페이지의 Secret 준비 전·후, 9단계 갱신, 재생·리셋·이동 시 중지, 세 실패 조건과 정상 조건 복귀를 확인했다.
+- 브라우저 예외는 없었으며 데스크톱·모바일 화면을 시각적으로 확인했다. 재생 제어가 긴 단계 목록에 눌려 세로로 줄바꿈되는 현상도 보정했다.
+- 실제 클러스터나 ACME 서버를 사용한 인증서 발급 테스트는 수행하지 않았다. 모든 로그·API 객체는 교육용 예시이며 개인 키·CSR·인증서 내용은 생략한다.
+
 ## 열린 탭에서 신규 페이지 이동 오류 수정 (2026-10-08)
 
 - 사용 중이던 `http://localhost:5173/` 탭에서 9번 목차를 클릭하면 `#/learn/overview`로 돌아가는 증상을 재현했다. 목차의 href는 `#/learn/volume-types`로 정상이었다.

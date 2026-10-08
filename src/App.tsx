@@ -21,6 +21,8 @@ import { STATEFULSET_PRESET, STATEFULSET_STEPS } from "./data/statefulsetSteps";
 import { StatefulSetIdentity } from "./components/Learning/StatefulSetIdentity";
 import { CONFIG_SECRET_STEPS, CONFIG_SECRET_YAML } from "./data/configSecretSteps";
 import { ConfigSecretLesson } from "./components/Learning/ConfigSecretLesson";
+import { certManagerSteps } from "./data/certManagerSteps";
+import { CertManagerCanvas, CertManagerLesson, CertManagerYaml } from "./components/Learning/CertManagerLesson";
 import { volumeExample, volumeSteps } from "./data/volumeExamples";
 import { VolumeLesson, VolumeMountCanvas } from "./components/Learning/VolumeLesson";
 import {
@@ -153,6 +155,8 @@ export function App() {
   const lifecycle = state.page === "pod-lifecycle";
   const statefulset = state.page === "statefulset-creation";
   const configuration = state.page === "configmap-secret";
+  const certificates = state.page === "cert-manager-ingress";
+  const certificateScenario = certificates ? certManagerSteps(progress.example) : [];
   const volumes = state.page === "volume-types";
   const volumePreset = volumeExample(progress.example);
   const volumeScenario = volumes ? volumeSteps(volumePreset) : [];
@@ -174,6 +178,7 @@ export function App() {
               ? INGRESS_STEPS
               : STORAGE_STEPS;
   if (volumes) clusterSteps = volumeScenario;
+  if (certificates) clusterSteps = certificateScenario;
   if (state.page === "ingress" && INGRESS_ERRORS[progress.example]) {
     const base = INGRESS_STEPS[0];
     clusterSteps = [
@@ -499,12 +504,17 @@ export function App() {
                 <StatefulSetIdentity records={clusterStep.etcdState?.records ?? []} />
               ) : null}
               {configuration ? <ConfigSecretLesson stepIndex={index} /> : null}
+              {certificates ? (
+                <CertManagerLesson example={progress.example} tlsReady={certificateScenario[index].tlsReady} onExampleChange={(example) => update({ example, index: 0, playing: false })} />
+              ) : null}
               {volumes ? (
                 <VolumeLesson example={volumePreset} onExampleChange={(example) => update({ example, index: 0, playing: false })} />
               ) : null}
               <div className="grid grid-cols-1 xl:grid-cols-[minmax(0,1fr)_300px] gap-4 items-start">
                 <div className="min-w-0">
-                  {volumes ? (
+                  {certificates ? (
+                    <CertManagerCanvas key={page.id} active={certificateScenario[index].activeConcepts} />
+                  ) : volumes ? (
                     <VolumeMountCanvas example={volumePreset} step={volumeScenario[index]} />
                   ) : internal || lifecycle ? (
                     <PodDeepDiveCanvas
@@ -588,7 +598,7 @@ export function App() {
                       : clusterStep.k8sMechanism
                   }
                   {...explanation}
-                  sources={configuration ? clusterStep.sources : [source]}
+                  sources={configuration || certificates ? clusterStep.sources : [source]}
                 />
               </div>
               {!internal && !lifecycle && clusterStep.podsState.length ? (
@@ -677,7 +687,9 @@ export function App() {
                   시뮬레이션 예시 · Apply와 재생은 실제 클러스터를 변경하지
                   않습니다.
                 </p>
-                {volumes ? (
+                {certificates ? (
+                  <CertManagerYaml />
+                ) : volumes ? (
                   <LearningSnippet title={`${volumePreset.name} · volumes와 volumeMounts`} code={volumePreset.yaml} />
                 ) : configuration ? (
                   <LearningSnippet title="ConfigMap·Secret와 Pod 환경변수·파일 참조" code={CONFIG_SECRET_YAML} />
@@ -764,6 +776,7 @@ export function App() {
               {!internal && !lifecycle ? (
                 <details className="learning-details">
                   <summary>API 리소스와 etcd · 시뮬레이션 예시</summary>
+                  {certificates ? <p className="text-xs text-slate-400 mb-3">발급 단계별 API 객체의 주요 필드만 표시합니다. 경로는 논리적 위치이며 실제 etcd 키가 아닙니다. 인증서·CSR·개인 키는 생략한 표시용 값입니다.</p> : null}
                   <EtcdLiveViewer etcdState={clusterStep.etcdState} compact />
                 </details>
               ) : null}
@@ -782,7 +795,7 @@ export function App() {
               rel="noreferrer"
               className="inline-block mt-3 text-xs underline text-blue-400"
             >
-              Kubernetes 공식 설명 ↗
+              {certificates ? "cert-manager 공식 설명 ↗" : "Kubernetes 공식 설명 ↗"}
             </a>
           </section>
           <LearningNavigation page={page.id} />

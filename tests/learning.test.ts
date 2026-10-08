@@ -20,13 +20,43 @@ import { LIFECYCLE_EXAMPLES } from "../src/data/lifecycleExamples";
 import { STATEFULSET_STEPS } from "../src/data/statefulsetSteps";
 import { CONFIG_SECRET_STEPS } from "../src/data/configSecretSteps";
 import { VOLUME_EXAMPLES, volumeExample, volumeSteps } from "../src/data/volumeExamples";
+import { CERT_MANAGER_STEPS, certManagerSteps } from "../src/data/certManagerSteps";
 
-test("all eleven pages have independent, addressable entry points", () => {
-  assert.equal(LEARNING_PAGES.length, 11);
-  assert.equal(new Set(LEARNING_PAGES.map((p) => p.id)).size, 11);
+test("all twelve pages have independent, addressable entry points", () => {
+  assert.equal(LEARNING_PAGES.length, 12);
+  assert.equal(new Set(LEARNING_PAGES.map((p) => p.id)).size, 12);
   for (const page of LEARNING_PAGES)
     assert.equal(pageFromHash(pageHref(page.id)), page.id);
   assert.equal(pageFromHash("#/learn/missing"), "overview");
+});
+test("certificate issuance creates matching references and a TLS Secret only after validation", () => {
+  const records = (index: number) => CERT_MANAGER_STEPS[index].etcdState!.records;
+  const ingress = records(2).find((record) => record.type === "Ingress")!.data;
+  const certificate = records(3).find((record) => record.type === "Certificate")!.data;
+  assert.equal(ingress.metadata.annotations["cert-manager.io/cluster-issuer"], certificate.spec.issuerRef.name);
+  assert.equal(ingress.spec.tls[0].secretName, certificate.spec.secretName);
+  assert.deepEqual(ingress.spec.tls[0].hosts, certificate.spec.dnsNames);
+  assert.equal(records(4).find((record) => record.type === "Challenge")!.data.status.state, "pending");
+  assert.equal(records(5).find((record) => record.type === "Challenge")!.data.status.state, "valid");
+  assert.ok(CERT_MANAGER_STEPS.slice(0, 6).every((step) => !step.tlsReady && !step.etcdState!.records.some((record) => record.type === "Secret")));
+  const issued = records(6).find((record) => record.type === "Secret")!.data;
+  assert.equal(issued.type, "kubernetes.io/tls");
+  assert.deepEqual(Object.keys(issued.data), ["tls.crt", "tls.key"]);
+  assert.equal(issued.metadata.namespace, ingress.metadata.namespace);
+  assert.equal(records(8).find((record) => record.type === "Certificate")!.data.status.revision, 2);
+  assert.equal(records(8).find((record) => record.type === "Secret")!.data.metadata.name, issued.metadata.name);
+});
+test("failed certificate prerequisites stop before TLS readiness without changing the normal scenario", () => {
+  for (const example of ["no-cert-manager", "issuer-not-ready", "http01-failed"]) {
+    const steps = certManagerSteps(example);
+    assert.ok(steps.every((step) => !step.tlsReady && !step.etcdState!.records.some((record) => record.type === "Secret")));
+  }
+  const issuerFailure = certManagerSteps("issuer-not-ready").at(-1)!;
+  assert.equal(issuerFailure.etcdState!.records[0].data.status.conditions[0].status, "False");
+  const httpFailure = certManagerSteps("http01-failed").at(-1)!;
+  assert.equal(httpFailure.etcdState!.records.find((record) => record.type === "Challenge")!.data.status.state, "pending");
+  assert.equal(CERT_MANAGER_STEPS[5].etcdState!.records.find((record) => record.type === "Challenge")!.data.status.state, "valid");
+  assert.equal(CERT_MANAGER_STEPS[1].etcdState!.records[0].data.status.conditions[0].status, "True");
 });
 test("navigation initializes newly added pages in an existing session", () => {
   const state = initialLearningState("configmap-secret");

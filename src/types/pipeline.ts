@@ -60,6 +60,11 @@ export interface EtcdRecord {
     | 'PersistentVolume'
     | 'VolumeAttachment'
     | 'Ingress'
+    | 'ClusterIssuer'
+    | 'Certificate'
+    | 'CertificateRequest'
+    | 'Order'
+    | 'Challenge'
     | 'IngressClass';
   action: 'created' | 'updated' | 'unchanged';
   revision: number;

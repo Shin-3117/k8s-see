@@ -1,6 +1,6 @@
 # K8sSee 학습 가이드
 
-11개 학습 페이지의 설명 기준입니다. 화면은 같은 순서로 탐색하며, 페이지 내부의 재생은 교육용 시뮬레이션입니다. IP·시간·UID·revision·로그는 실제 클러스터의 조회 결과가 아닙니다.
+12개 학습 페이지의 설명 기준입니다. 화면은 같은 순서로 탐색하며, 페이지 내부의 재생은 교육용 시뮬레이션입니다. IP·시간·UID·revision·로그는 실제 클러스터의 조회 결과가 아닙니다.
 
 ## 1. Kubernetes 전체 구조
 
@@ -240,6 +240,24 @@ kubectl describe secret example-tls-cert -n default
 curl -i https://api.example.com/orders
 curl -i https://api.example.com/products
 ```
+
+## cert-manager 기반 Ingress 생성
+
+페이지 ID: `cert-manager-ingress` (Ingress와 외부 요청 다음 학습)
+
+cert-manager와 HTTP-01을 지원하는 Ingress Controller를 설치하고 도메인 DNS와 외부 80·443 포트, 앱 Service의 Ready 백엔드를 준비한다. `public`은 설치된 IngressClass로, `app.example.com`은 소유한 도메인으로 바꾼다.
+
+9단계: 사전 준비 → ClusterIssuer와 ACME 계정 → TLS Ingress 등록 → ingress-shim의 Certificate 생성 → CertificateRequest·Order·Challenge → HTTP-01 검증 → TLS Secret 저장 → HTTPS 연결 → 만료 전 갱신.
+
+Ingress의 `cert-manager.io/cluster-issuer` annotation이 발급자를 선택하고 `tls.hosts`가 인증서의 도메인, `tls.secretName`이 저장할 Secret 이름을 지정한다. Certificate와 TLS Secret은 Ingress와 같은 Namespace에 생성된다. ClusterIssuer의 ACME 계정 키 Secret은 사이트 TLS Secret과 별개다. Issuer를 사용한다면 같은 Namespace에 두고 `cert-manager.io/issuer` annotation으로 참조한다.
+
+HTTP-01은 공개 HTTP 검증 URL을 임시 solver로 연결한다. cert-manager의 자체 점검과 인증기관의 검증이 성공하면 인증서 체인과 개인 키를 `kubernetes.io/tls` Secret의 `tls.crt`·`tls.key`로 저장한다. Ingress Controller는 Secret을 읽어 443번 포트의 TLS를 종료한다. 이 예시에서 Controller에서 앱으로 가는 연결은 HTTP이며, 백엔드 TLS와 HTTPS 리다이렉트는 별도 설정이다. 와일드카드는 DNS-01이 필요하다.
+
+cert-manager 미설치, ClusterIssuer 준비 실패, DNS·80번 포트·solver 클래스 문제를 각각 선택할 수 있다. 실패 분기에서는 TLS Secret이 만들어지지 않는다. 인증서 갱신도 도메인 검증과 발급자 상태가 정상이어야 한다.
+
+예시 YAML은 Let’s Encrypt staging을 사용해 발급 흐름을 확인하며 브라우저 신뢰 경고가 예상된다. 운영에서는 별도 production ClusterIssuer를 등록하고 Ingress annotation을 변경해 재발급한다. Ready 상태 외에 실제 인증서의 발급자와 Controller 반영도 확인한다. 앱의 재생·로그·API 객체는 교육용 고정 예시이며 실제 클러스터를 변경하지 않는다.
+
+공식 근거: [Ingress 자동 인증서](https://cert-manager.io/docs/usage/ingress/), [HTTP-01](https://cert-manager.io/docs/configuration/acme/http01/), [Certificate와 갱신](https://cert-manager.io/docs/usage/certificate/), [Let’s Encrypt 검증 방식](https://letsencrypt.org/docs/challenge-types/)
 
 ## 6. 주요 리소스 관계
 
