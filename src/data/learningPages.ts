@@ -22,6 +22,17 @@ export const LEARNING_PAGES = [
       "스케줄러는 노드를 선택하고, kubelet과 런타임이 실제 컨테이너를 실행합니다.",
   },
   {
+    id: "statefulset-creation",
+    title: "StatefulSet 생성 과정",
+    question: "Pod의 이름과 전용 저장소는 어떻게 유지될까?",
+    summary:
+      "StatefulSet 컨트롤러가 Pod를 순서대로 만들고, 각 Pod에 고유한 이름과 PVC를 연결합니다. Headless Service는 Pod별 DNS 이름의 기반입니다.",
+    guide: "StatefulSet 생성과 Pod별 저장소",
+    source: "workloads/controllers/statefulset",
+    takeaway:
+      "Pod가 교체되어도 이름과 PVC는 유지되고 UID와 IP는 달라질 수 있습니다. 데이터 복제와 복구는 애플리케이션이 담당합니다.",
+  },
+  {
     id: "pod-internals",
     title: "Pod 내부 구조",
     question: "같은 Pod의 컨테이너는 무엇을 공유할까?",
@@ -63,7 +74,29 @@ export const LEARNING_PAGES = [
     guide: "5. 주요 리소스의 관계",
     source: "overview/working-with-objects",
     takeaway:
-      "ServiceAccount는 신원이고 RBAC Binding이 권한을 연결합니다. 다음 학습에서는 저장소 관계를 확장합니다.",
+      "ServiceAccount는 신원이고 RBAC Binding이 권한을 연결합니다. 다음 학습에서는 ConfigMap과 Secret의 저장·전달을 살펴봅니다.",
+  },
+  {
+    id: "configmap-secret",
+    title: "ConfigMap과 Secret",
+    question: "설정과 비밀번호는 어디에 저장되고 Pod에 어떻게 전달될까?",
+    summary:
+      "ConfigMap은 일반 설정, Secret은 민감한 값을 관리합니다. 둘 다 API Server를 통해 etcd에 저장되고, kubelet이 Pod에 환경변수나 파일로 전달합니다.",
+    guide: "ConfigMap·Secret 저장과 Pod 전달",
+    source: "configuration/secret",
+    takeaway:
+      "Base64는 암호화가 아닙니다. Secret도 저장 암호화와 접근 제어가 필요하며, 환경변수와 마운트 파일의 변경 반영 방식은 다릅니다.",
+  },
+  {
+    id: "volume-types",
+    title: "Volume 종류와 수명",
+    question: "컨테이너 재시작과 Pod 삭제 때 볼륨의 데이터는 어떻게 달라질까?",
+    summary:
+      "볼륨은 임시 파일, 설정 파일, 노드 디스크, 외부 저장소 등 다양한 소스를 컨테이너에 연결합니다. 종류에 따라 데이터의 수명과 다른 노드에서의 사용 조건이 다릅니다.",
+    guide: "Volume 종류·마운트·데이터 수명",
+    source: "storage/volumes",
+    takeaway:
+      "같은 Pod에서 컨테이너만 재시작하면 볼륨은 유지됩니다. Pod 삭제 시 emptyDir 데이터는 사라지고, 설정 원본과 PVC/PV의 수명은 별도로 관리합니다.",
   },
   {
     id: "persistent-storage",

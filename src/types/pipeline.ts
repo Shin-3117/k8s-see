@@ -48,11 +48,13 @@ export interface EtcdRecord {
   key: string;
   type:
     | 'Deployment'
+    | 'StatefulSet'
     | 'ReplicaSet'
     | 'Pod'
     | 'EndpointSlice'
     | 'Service'
     | 'ConfigMap'
+    | 'Secret'
     | 'StorageClass'
     | 'PersistentVolumeClaim'
     | 'PersistentVolume'
@@ -141,4 +143,3 @@ export interface FlowchartNode {
 }
 
 export type AppMode = 'mode1-manifest' | 'mode2-pod-lifecycle' | 'mode3-separated-apply' | 'mode4-pvc' | 'mode5-ingress';
-

@@ -34,6 +34,8 @@ interface ReactFlowClusterCanvasProps {
   onSelectComponent: (componentId: K8sComponentId) => void;
   yamlHighlightedComponents?: K8sComponentId[];
   showAwsNode?: boolean;
+  showCsiNode?: boolean;
+  statefulset?: boolean;
   awsEbsState?: {
     volumeId: string;
     size: string;
@@ -55,11 +57,14 @@ export const ReactFlowClusterCanvas: React.FC<ReactFlowClusterCanvasProps> = ({
   onSelectComponent,
   yamlHighlightedComponents = [],
   showAwsNode = false,
+  showCsiNode = false,
+  statefulset = false,
   awsEbsState,
   showIngressNode = false,
   ingressControllerState,
   activeRoute
 }) => {
+  const showStorage = showAwsNode || showCsiNode;
   const nodeTypes = useMemo(
     () => ({
       developer: DeveloperNode,
@@ -115,7 +120,7 @@ export const ReactFlowClusterCanvas: React.FC<ReactFlowClusterCanvasProps> = ({
         }
       },
       {
-        id: showAwsNode ? 'csiController' : 'cloudController',
+        id: showStorage ? 'csiController' : 'cloudController',
         type: 'cloudController',
         position: { x: 395, y: 40 },
         width: 150,
@@ -123,11 +128,11 @@ export const ReactFlowClusterCanvas: React.FC<ReactFlowClusterCanvasProps> = ({
         initialWidth: 150,
         initialHeight: 95,
         data: {
-          isCSI: showAwsNode,
-          isActive: activeComponents.includes(showAwsNode ? 'csiController' : 'cloudControllerManager'),
-          isHighlighted: yamlHighlightedComponents.includes(showAwsNode ? 'csiController' : 'cloudControllerManager'),
-          isSelected: selectedComponent === (showAwsNode ? 'csiController' : 'cloudControllerManager'),
-          onClick: () => onSelectComponent(showAwsNode ? 'csiController' : 'cloudControllerManager')
+          isCSI: showStorage,
+          isActive: activeComponents.includes(showStorage ? 'csiController' : 'cloudControllerManager'),
+          isHighlighted: yamlHighlightedComponents.includes(showStorage ? 'csiController' : 'cloudControllerManager'),
+          isSelected: selectedComponent === (showStorage ? 'csiController' : 'cloudControllerManager'),
+          onClick: () => onSelectComponent(showStorage ? 'csiController' : 'cloudControllerManager')
         }
       },
       {
@@ -169,6 +174,7 @@ export const ReactFlowClusterCanvas: React.FC<ReactFlowClusterCanvasProps> = ({
         initialWidth: 150,
         initialHeight: 95,
         data: {
+          statefulset,
           isActive: activeComponents.includes('controllerManager'),
           isHighlighted: yamlHighlightedComponents.includes('controllerManager'),
           isSelected: selectedComponent === 'controllerManager',
@@ -193,7 +199,8 @@ export const ReactFlowClusterCanvas: React.FC<ReactFlowClusterCanvasProps> = ({
           yamlHighlightedComponents,
           selectedComponent,
           onSelectComponent,
-          showStorage: showAwsNode
+          showStorage,
+          statefulset
         }
       },
       {
@@ -213,7 +220,8 @@ export const ReactFlowClusterCanvas: React.FC<ReactFlowClusterCanvasProps> = ({
           yamlHighlightedComponents,
           selectedComponent,
           onSelectComponent,
-          showStorage: showAwsNode
+          showStorage,
+          statefulset
         }
       },
       // 4. End Users Node
@@ -283,6 +291,8 @@ export const ReactFlowClusterCanvas: React.FC<ReactFlowClusterCanvasProps> = ({
     podsNode1,
     podsNode2,
     showAwsNode,
+    showStorage,
+    statefulset,
     awsEbsState,
     showIngressNode,
     ingressControllerState,
@@ -451,7 +461,7 @@ export const ReactFlowClusterCanvas: React.FC<ReactFlowClusterCanvasProps> = ({
       makeEdge('e-api-etcd', 'apiserver', 'etcd', 'top-etcd-source', 'bottom-target', false, true),
 
       // API Server <-> Cloud Controller (CCM)
-      makeEdge('e-api-ccm', 'apiserver', showAwsNode ? 'csiController' : 'cloudController', 'top-ccm-source', 'bottom-target', true, true),
+      makeEdge('e-api-ccm', 'apiserver', showStorage ? 'csiController' : 'cloudController', 'top-ccm-source', 'bottom-target', true, true),
 
       // API Server <-> Scheduler
       makeEdge('e-api-sched', 'apiserver', 'scheduler', 'bottom-sched-source', 'top-target', false, true),
@@ -563,7 +573,7 @@ export const ReactFlowClusterCanvas: React.FC<ReactFlowClusterCanvasProps> = ({
           ]
         : [])
     ];
-  }, [packets, showAwsNode, showIngressNode]);
+  }, [packets, showAwsNode, showStorage, showIngressNode]);
 
   const [interactiveNodes, setInteractiveNodes, onNodesChange] = useNodesState(nodes);
   useEffect(() => {

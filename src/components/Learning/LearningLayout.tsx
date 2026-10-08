@@ -35,7 +35,7 @@ export function LearningSidebar({ page }: { page: LearningPageId }) {
         onClick={() => setOpen((v) => !v)}
       >
         <Menu size={16} aria-hidden="true" />
-        학습 목차 · {current + 1}/8
+        학습 목차 · {current + 1}/{LEARNING_PAGES.length}
       </button>
       <nav
         id="learning-menu"

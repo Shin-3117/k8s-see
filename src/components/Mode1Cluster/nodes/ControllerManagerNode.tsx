@@ -2,6 +2,7 @@ import React from 'react';
 import { Handle, Position } from '@xyflow/react';
 
 interface ControllerManagerNodeData {
+  statefulset?: boolean;
   isActive: boolean;
   isHighlighted: boolean;
   isSelected: boolean;
@@ -28,7 +29,7 @@ export const ControllerManagerNode: React.FC<{ data: ControllerManagerNodeData }
       </div>
       <span className="text-xs font-bold text-white text-center">Controller Manager</span>
       <span className="text-[9px] text-emerald-400 font-mono">Reconcile Loop</span>
-      <span className="text-[8px] text-slate-500 mt-0.5">Deployment/RS/Node</span>
+      <span className="text-[8px] text-slate-500 mt-0.5">{data.statefulset ? 'StatefulSet / Node' : 'Deployment/RS/Node'}</span>
 
       {/* Handles connecting to API Server (Top) */}
       <Handle type="target" position={Position.Top} id="top-target" className="w-2.5 h-2.5 bg-emerald-500 !top-[-5px]" />

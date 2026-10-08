@@ -44,10 +44,13 @@ const go = (page) => {
 const pages = [
   "overview",
   "pod-creation",
+  "statefulset-creation",
   "pod-internals",
   "service-networking",
   "ingress",
   "resource-relations",
+  "configmap-secret",
+  "volume-types",
   "persistent-storage",
   "pod-lifecycle",
 ];
@@ -95,7 +98,7 @@ try {
         );
     }
     console.log(
-      `PASS: 8 pages, navigation titles and expanded details at ${width}px`,
+      `PASS: ${pages.length} pages, navigation titles and expanded details at ${width}px`,
     );
   }
   command("set", "viewport", "1440", "1000");
@@ -111,6 +114,49 @@ try {
   command("reload");
   assert.equal(current().heading, "Pod 라이프사이클");
   console.log("PASS: previous/next learning, history and reload");
+
+  go("statefulset-creation");
+  click('button[aria-label^="단계 3:"]');
+  assert.match(evaluate(`document.querySelector('[aria-label="web-0 식별자와 저장소"]').innerText`), /Pending/);
+  assert.match(evaluate(`document.querySelector('[aria-label="web-1 식별자와 저장소"]').innerText`), /Pod 없음/);
+  click('button[aria-label^="단계 7:"]');
+  assert.match(evaluate(`document.querySelector('[aria-label="web-0 식별자와 저장소"]').innerText`), /web-0-original/);
+  click('button[aria-label^="단계 9:"]');
+  assert.match(evaluate(`document.querySelector('[aria-label="web-0 식별자와 저장소"]').innerText`), /web-0-new/);
+  assert.match(evaluate(`document.querySelector('[aria-label="web-0 식별자와 저장소"]').innerText`), /data-web-0 \(Bound\)/);
+  go("pod-creation");
+  go("statefulset-creation");
+  assert.match(current().step, /현재 단계 9\/9/);
+  click('button[aria-label="현재 페이지 리셋"]');
+  assert.match(current().step, /현재 단계 1\/9/);
+  console.log("PASS: StatefulSet ordered creation, PVC reuse and independent page state");
+
+  go("configmap-secret");
+  click('button[aria-label^="단계 2:"]');
+  assert.equal(evaluate('document.querySelectorAll("main table caption").length'), 1);
+  click('button[aria-label^="단계 6:"]');
+  assert.match(evaluate('document.querySelector("[data-testid=config-env-value]").innerText'), /production/);
+  assert.match(evaluate('document.querySelector("[data-testid=config-file-value]").innerText'), /mode=debug/);
+  go("resource-relations");
+  go("configmap-secret");
+  assert.match(current().step, /현재 단계 6\/6/);
+  console.log("PASS: ConfigMap/Secret storage, env/file updates and page state");
+
+  go("volume-types");
+  click('button[aria-label^="단계 3:"]');
+  assert.match(evaluate('document.querySelector("[data-testid=volume-content-reader]").innerText'), /hello-volume/);
+  click('button[aria-label^="단계 5:"]');
+  assert.match(evaluate('document.querySelector("[data-testid=volume-content-reader]").innerText'), /빈 디렉터리/);
+  for (const example of ["configuration", "pvc"]) {
+    select("볼륨 수명 예시", example);
+    assert.match(current().step, /현재 단계 1\/5/);
+    click('button[aria-label^="단계 5:"]');
+    assert.match(evaluate('document.querySelector("[data-testid=volume-content-reader]").innerText'), example === "pvc" ? /hello-volume/ : /mode=production/);
+  }
+  go("configmap-secret");
+  go("volume-types");
+  assert.match(current().step, /현재 단계 5\/5/);
+  console.log("PASS: volume restart, Pod replacement, source retention and page state");
 
   open("ingress");
   click('button[aria-label^="단계 5:"]');

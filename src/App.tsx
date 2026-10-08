@@ -17,6 +17,12 @@ import {
 import { MODE2_STEPS } from "./data/mode2Steps";
 import { LIFECYCLE_EXAMPLES } from "./data/lifecycleExamples";
 import { YAML_PRESETS } from "./data/yamlPresets";
+import { STATEFULSET_PRESET, STATEFULSET_STEPS } from "./data/statefulsetSteps";
+import { StatefulSetIdentity } from "./components/Learning/StatefulSetIdentity";
+import { CONFIG_SECRET_STEPS, CONFIG_SECRET_YAML } from "./data/configSecretSteps";
+import { ConfigSecretLesson } from "./components/Learning/ConfigSecretLesson";
+import { volumeExample, volumeSteps } from "./data/volumeExamples";
+import { VolumeLesson, VolumeMountCanvas } from "./components/Learning/VolumeLesson";
 import {
   Mode1Step,
   Mode4Step,
@@ -134,15 +140,10 @@ export function App() {
       if (window.location.hash !== pageHref(pageId))
         window.history.replaceState(null, "", pageHref(pageId));
     };
-    if (window.location.hash !== pageHref(pageFromHash(window.location.hash)))
-      window.history.replaceState(
-        null,
-        "",
-        pageHref(pageFromHash(window.location.hash)),
-      );
+    navigate();
     window.addEventListener("hashchange", navigate);
     return () => window.removeEventListener("hashchange", navigate);
-  }, []);
+  }, [pageFromHash, pageHref]);
   useEffect(() => {
     document.title = `${pageIndex + 1}. ${page.title} | K8sSee`;
     headingRef.current?.focus({ preventScroll: true });
@@ -150,20 +151,29 @@ export function App() {
   }, [page.id, page.title, pageIndex]);
 
   const lifecycle = state.page === "pod-lifecycle";
+  const statefulset = state.page === "statefulset-creation";
+  const configuration = state.page === "configmap-secret";
+  const volumes = state.page === "volume-types";
+  const volumePreset = volumeExample(progress.example);
+  const volumeScenario = volumes ? volumeSteps(volumePreset) : [];
   const internal = state.page === "pod-internals";
   const podSteps = internal
     ? MODE2_STEPS.filter((s) => s.id !== "terminating")
     : (LIFECYCLE_EXAMPLES[progress.example] ?? LIFECYCLE_EXAMPLES.normal).steps;
-  let clusterSteps: ClusterStep[] =
-    state.page === "pod-creation"
+  let clusterSteps: ClusterStep[] = configuration
+    ? CONFIG_SECRET_STEPS
+    : state.page === "pod-creation"
       ? CREATION_STEPS
-      : state.page === "service-networking"
-        ? SERVICE_STEPS
-        : state.page === "resource-relations"
-          ? RESOURCE_STEPS
-          : state.page === "ingress"
-            ? INGRESS_STEPS
-            : STORAGE_STEPS;
+      : statefulset
+        ? STATEFULSET_STEPS
+        : state.page === "service-networking"
+          ? SERVICE_STEPS
+          : state.page === "resource-relations"
+            ? RESOURCE_STEPS
+            : state.page === "ingress"
+              ? INGRESS_STEPS
+              : STORAGE_STEPS;
+  if (volumes) clusterSteps = volumeScenario;
   if (state.page === "ingress" && INGRESS_ERRORS[progress.example]) {
     const base = INGRESS_STEPS[0];
     clusterSteps = [
@@ -271,8 +281,9 @@ export function App() {
     hasPlayback,
   ]);
   const source = sourceUrl(page.source);
-  const preset =
-    YAML_PRESETS.find((p) => p.id === progress.example) ?? YAML_PRESETS[0];
+  const preset = statefulset
+    ? STATEFULSET_PRESET
+    : (YAML_PRESETS.find((p) => p.id === progress.example) ?? YAML_PRESETS[0]);
   const impact =
     preset.impacts.find(
       (i) =>
@@ -315,7 +326,7 @@ export function App() {
         <main id="learning-content" className="learning-main space-y-5">
           <section className="learning-panel">
             <p className="text-xs text-blue-400 mb-2">
-              학습 {pageIndex + 1} / 8
+              학습 {pageIndex + 1} / {LEARNING_PAGES.length}
             </p>
             <h1
               ref={headingRef}
@@ -484,9 +495,18 @@ export function App() {
             <ConceptCanvas key={page.id} variant="overview" />
           ) : (
             <>
+              {statefulset ? (
+                <StatefulSetIdentity records={clusterStep.etcdState?.records ?? []} />
+              ) : null}
+              {configuration ? <ConfigSecretLesson stepIndex={index} /> : null}
+              {volumes ? (
+                <VolumeLesson example={volumePreset} onExampleChange={(example) => update({ example, index: 0, playing: false })} />
+              ) : null}
               <div className="grid grid-cols-1 xl:grid-cols-[minmax(0,1fr)_300px] gap-4 items-start">
                 <div className="min-w-0">
-                  {internal || lifecycle ? (
+                  {volumes ? (
+                    <VolumeMountCanvas example={volumePreset} step={volumeScenario[index]} />
+                  ) : internal || lifecycle ? (
                     <PodDeepDiveCanvas
                       currentStep={podStep}
                       showLifecycleActions={lifecycle}
@@ -540,11 +560,13 @@ export function App() {
                       selectedComponent={detailId}
                       onSelectComponent={selectComponent}
                       yamlHighlightedComponents={
-                        page.id === "pod-creation"
+                        page.id === "pod-creation" || statefulset
                           ? (impact?.affectedComponents ?? [])
                           : []
                       }
                       showAwsNode={page.id === "persistent-storage"}
+                      showCsiNode={statefulset}
+                      statefulset={statefulset}
                       awsEbsState={selectedStorage.awsEbsState}
                       showIngressNode={page.id === "ingress"}
                       ingressControllerState={
@@ -566,7 +588,7 @@ export function App() {
                       : clusterStep.k8sMechanism
                   }
                   {...explanation}
-                  sources={[source]}
+                  sources={configuration ? clusterStep.sources : [source]}
                 />
               </div>
               {!internal && !lifecycle && clusterStep.podsState.length ? (
@@ -655,7 +677,11 @@ export function App() {
                   시뮬레이션 예시 · Apply와 재생은 실제 클러스터를 변경하지
                   않습니다.
                 </p>
-                {page.id === "pod-creation" ? (
+                {volumes ? (
+                  <LearningSnippet title={`${volumePreset.name} · volumes와 volumeMounts`} code={volumePreset.yaml} />
+                ) : configuration ? (
+                  <LearningSnippet title="ConfigMap·Secret와 Pod 환경변수·파일 참조" code={CONFIG_SECRET_YAML} />
+                ) : page.id === "pod-creation" || statefulset ? (
                   <>
                     <YamlEditor
                       preset={preset}

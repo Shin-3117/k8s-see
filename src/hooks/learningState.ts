@@ -34,9 +34,9 @@ export function learningReducer(
 ): LearningState {
   if (action.type === "navigate") {
     const progress = Object.fromEntries(
-      Object.entries(state.progress).map(([id, p]) => [
-        id,
-        { ...p, playing: false },
+      LEARNING_PAGES.map((page) => [
+        page.id,
+        { ...(state.progress[page.id] ?? defaultProgress()), playing: false },
       ]),
     ) as LearningState["progress"];
     return { page: action.page, progress };

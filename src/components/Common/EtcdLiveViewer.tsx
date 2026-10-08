@@ -195,7 +195,7 @@ export const EtcdLiveViewer: React.FC<EtcdLiveViewerProps> = ({ etcdState, compa
         <div className="flex items-center gap-2 text-[11px]">
           <Info className="w-3.5 h-3.5 text-cyan-400 shrink-0" />
           <span>
-            Deployment, ReplicaSet, Pod, EndpointSlice는 <strong className="text-white">독립된 경로</strong>에 각각 저장되며 <strong className="text-cyan-200">ownerReferences</strong>로 부모-자식 계층이 연결됩니다.
+            각 API 리소스는 <strong className="text-white">독립된 경로</strong>에 저장됩니다. 관리 관계는 <strong className="text-cyan-200">ownerReferences</strong>, 선택·참조 관계는 selector와 리소스 이름 등으로 연결됩니다.
           </span>
         </div>
 

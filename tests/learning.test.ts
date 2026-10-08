@@ -17,13 +17,124 @@ import {
 } from "../src/data/learningScenarios";
 import { MODE2_STEPS } from "../src/data/mode2Steps";
 import { LIFECYCLE_EXAMPLES } from "../src/data/lifecycleExamples";
+import { STATEFULSET_STEPS } from "../src/data/statefulsetSteps";
+import { CONFIG_SECRET_STEPS } from "../src/data/configSecretSteps";
+import { VOLUME_EXAMPLES, volumeExample, volumeSteps } from "../src/data/volumeExamples";
 
-test("all eight pages have independent, addressable entry points", () => {
-  assert.equal(LEARNING_PAGES.length, 8);
-  assert.equal(new Set(LEARNING_PAGES.map((p) => p.id)).size, 8);
+test("all eleven pages have independent, addressable entry points", () => {
+  assert.equal(LEARNING_PAGES.length, 11);
+  assert.equal(new Set(LEARNING_PAGES.map((p) => p.id)).size, 11);
   for (const page of LEARNING_PAGES)
     assert.equal(pageFromHash(pageHref(page.id)), page.id);
   assert.equal(pageFromHash("#/learn/missing"), "overview");
+});
+test("navigation initializes newly added pages in an existing session", () => {
+  const state = initialLearningState("configmap-secret");
+  state.progress["configmap-secret"] = { ...state.progress["configmap-secret"], index: 3, speed: 2, playing: true };
+  // Simulate a tab that was already open before the Volume page was added.
+  delete (state.progress as Partial<typeof state.progress>)["volume-types"];
+  const next = learningReducer(state, { type: "navigate", page: pageFromHash("#/learn/volume-types") });
+  assert.equal(next.page, "volume-types");
+  assert.equal(next.progress["volume-types"].index, 0);
+  assert.equal(next.progress["volume-types"].playing, false);
+  assert.equal(next.progress["configmap-secret"].index, 3);
+  assert.equal(next.progress["configmap-secret"].speed, 2);
+  assert.equal(next.progress["configmap-secret"].playing, false);
+});
+test("emptyDir survives container restart but is empty in a replacement Pod", () => {
+  const steps = volumeSteps(volumeExample("normal"));
+  assert.equal(steps.length, 5);
+  assert.equal(steps[1].volumeState.content, "hello-volume");
+  assert.equal(steps[2].volumeState.content, "hello-volume");
+  assert.equal(steps[1].volumeState.podUid, steps[2].volumeState.podUid);
+  assert.equal(steps[2].podsState[0].restarts, 1);
+  assert.equal(steps[3].volumeState.mounted, false);
+  assert.equal(steps[3].podsState.length, 0);
+  assert.equal(steps[3].etcdState!.records.length, 0);
+  assert.notEqual(steps[4].volumeState.podUid, steps[1].volumeState.podUid);
+  assert.equal(steps[4].volumeState.content, "빈 디렉터리");
+  assert.match(steps[4].cliLogs[0].output[0], /No such file/);
+});
+test("configuration sources and PVCs outlive the example Pod with valid mount references", () => {
+  for (const example of Object.values(VOLUME_EXAMPLES)) {
+    const steps = volumeSteps(example);
+    for (const step of steps) {
+      const pod = step.etcdState!.records.find((r) => r.type === "Pod");
+      if (pod) for (const container of pod.data.spec.containers) {
+        assert.ok(container.volumeMounts.every((mount: { name: string }) => pod.data.spec.volumes.some((v: { name: string }) => v.name === mount.name)));
+      }
+    }
+    if (example.id === "emptydir") continue;
+    const sources = (index: number) => steps[index].etcdState!.records.filter((r) => r.type !== "Pod").map((r) => r.data);
+    assert.deepEqual(sources(1), sources(3));
+    assert.deepEqual(sources(1), sources(4));
+    assert.equal(steps[1].volumeState.content, steps[4].volumeState.content);
+    assert.notEqual(steps[1].volumeState.node, steps[4].volumeState.node);
+    assert.equal(steps[4].podsState[0].restarts, 0);
+  }
+});
+test("ConfigMap and Secret are stored separately before an explicitly created Pod", () => {
+  const saved = CONFIG_SECRET_STEPS[1];
+  assert.equal(saved.podsState.length, 0);
+  assert.deepEqual(saved.etcdState!.records.map((r) => r.type), ["ConfigMap", "Secret"]);
+  const secret = saved.etcdState!.records.find((r) => r.type === "Secret")!;
+  assert.equal(secret.key, "/registry/secrets/default/app-secret");
+  assert.equal(secret.data.stringData, undefined);
+  assert.equal(Buffer.from(secret.data.data.password, "base64").toString(), "demo-only");
+  const pod = CONFIG_SECRET_STEPS[2].etcdState!.records.find((r) => r.type === "Pod")!;
+  assert.equal(pod.data.spec.containers[0].env[0].valueFrom.configMapKeyRef.name, "app-settings");
+  assert.equal(pod.data.spec.containers[0].env[1].valueFrom.secretKeyRef.name, "app-secret");
+  assert.equal(pod.data.spec.volumes[0].configMap.name, "app-settings");
+  assert.equal(pod.data.spec.volumes[1].secret.secretName, "app-secret");
+  assert.ok(CONFIG_SECRET_STEPS.every((step) => step.packets.every((p) => p.from !== "etcd" || p.to === "apiserver")));
+  assert.ok(CONFIG_SECRET_STEPS.every((step) => step.packets.every((p) => p.to !== "etcd" || p.from === "apiserver")));
+});
+test("configuration updates preserve the running Pod and show different env/file behavior", () => {
+  const before = CONFIG_SECRET_STEPS[4], after = CONFIG_SECRET_STEPS[5];
+  const records = after.etcdState!.records;
+  assert.equal(records.find((r) => r.type === "ConfigMap")!.data.data.APP_MODE, "debug");
+  assert.equal(Buffer.from(records.find((r) => r.type === "Secret")!.data.data.password, "base64").toString(), "demo-only-v2");
+  assert.deepEqual(before.podsState, after.podsState);
+  assert.match(after.cliLogs[0].output[0], /production/);
+  assert.match(after.cliLogs[1].output[0], /mode=debug/);
+  let state = initialLearningState("configmap-secret");
+  state = learningReducer(state, { type: "update", patch: { index: 5, playing: true } });
+  state = learningReducer(state, { type: "navigate", page: "resource-relations" });
+  assert.equal(state.progress["configmap-secret"].playing, false);
+  state = learningReducer(state, { type: "navigate", page: "configmap-secret" });
+  assert.equal(state.progress["configmap-secret"].index, 5);
+});
+test("StatefulSet creates ordered Pods directly with independent claims", () => {
+  const records = (index: number) => STATEFULSET_STEPS[index].etcdState!.records;
+  assert.ok(STATEFULSET_STEPS.every((step) => !step.etcdState?.records.some((r) => r.type === "ReplicaSet" || r.type === "Deployment")));
+  assert.equal(records(1).find((r) => r.type === "Service")?.data.spec.clusterIP, "None");
+  assert.ok(!records(1).some((r) => r.type === "Pod"));
+  assert.ok(records(2).some((r) => r.type === "Pod" && r.data.metadata.name === "web-0"));
+  assert.ok(!records(2).some((r) => r.data.metadata.name === "web-1"));
+  assert.equal(records(2).find((r) => r.type === "Pod")?.data.spec.nodeName, undefined);
+  assert.equal(STATEFULSET_STEPS[2].podsState.length, 0);
+  const firstReady = records(4).find((r) => r.type === "Pod")!;
+  assert.equal(firstReady.data.status.conditions[0].status, "True");
+  assert.ok(records(5).some((r) => r.type === "Pod" && r.data.metadata.name === "web-1"));
+  const pods = records(6).filter((r) => r.type === "Pod");
+  assert.equal(pods.length, 2);
+  assert.deepEqual(pods.map((r) => r.data.spec.volumes[0].persistentVolumeClaim.claimName), ["data-web-0", "data-web-1"]);
+  assert.ok(pods.every((r) => r.data.metadata.ownerReferences[0].kind === "StatefulSet"));
+});
+test("StatefulSet replacement keeps name and claim while changing Pod UID and IP", () => {
+  const before = STATEFULSET_STEPS[6].etcdState!.records;
+  const deleted = STATEFULSET_STEPS[7].etcdState!.records;
+  const after = STATEFULSET_STEPS[8].etcdState!.records;
+  const findPod = (records: typeof before) => records.find((r) => r.type === "Pod" && r.data.metadata.name === "web-0")!.data;
+  assert.ok(!deleted.some((r) => r.type === "Pod" && r.data.metadata.name === "web-0"));
+  assert.deepEqual(before.filter((r) => r.type === "PersistentVolumeClaim").map((r) => r.data), deleted.filter((r) => r.type === "PersistentVolumeClaim").map((r) => r.data));
+  const original = findPod(before), replacement = findPod(after);
+  assert.equal(original.metadata.name, replacement.metadata.name);
+  assert.equal(original.spec.subdomain, replacement.spec.subdomain);
+  assert.notEqual(original.metadata.uid, replacement.metadata.uid);
+  assert.notEqual(original.status.podIP, replacement.status.podIP);
+  assert.deepEqual(original.spec.volumes, replacement.spec.volumes);
+  assert.deepEqual(before.filter((r) => r.type === "PersistentVolumeClaim" || r.type === "PersistentVolume").map((r) => r.data), after.filter((r) => r.type === "PersistentVolumeClaim" || r.type === "PersistentVolume").map((r) => r.data));
 });
 test("navigation pauses hidden playback and restores the visited page step", () => {
   let state = initialLearningState("ingress");

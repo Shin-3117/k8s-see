@@ -1,6 +1,6 @@
 # K8sSee 학습 가이드
 
-8개 학습 페이지의 설명 기준입니다. 화면은 같은 순서로 탐색하며, 페이지 내부의 재생은 교육용 시뮬레이션입니다. IP·시간·UID·revision·로그는 실제 클러스터의 조회 결과가 아닙니다.
+11개 학습 페이지의 설명 기준입니다. 화면은 같은 순서로 탐색하며, 페이지 내부의 재생은 교육용 시뮬레이션입니다. IP·시간·UID·revision·로그는 실제 클러스터의 조회 결과가 아닙니다.
 
 ## 1. Kubernetes 전체 구조
 
@@ -101,6 +101,31 @@ sequenceDiagram
 ```
 
 이 그림은 정상적인 시작 흐름을 단순화했다. 컨트롤러는 API Server를 통해 리소스를 변경하며 etcd를 직접 수정하지 않는다. Pod의 네트워크 준비 후 일반 init 컨테이너가 완료되면 앱 컨테이너가 시작된다. readiness가 성공하면 Service의 일반적인 트래픽 대상이 될 수 있다. [Pod 생명주기](https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle/)
+
+## StatefulSet 생성 과정
+
+페이지 ID: `statefulset-creation` (Deployment 생성 다음 학습)
+
+StatefulSet 컨트롤러는 ReplicaSet 없이 Pod를 직접 관리한다. Headless Service(`clusterIP: None`)를 별도로 생성하고 StatefulSet의 `serviceName`으로 연결한다. `OrderedReady` 정책에서는 `web-0`이 Running·Ready가 된 뒤 `web-1`을 생성한다.
+
+```mermaid
+flowchart LR
+    API["API Server"] --> STS["StatefulSet web"]
+    STS --> P0["web-0 · ordinal 0"]
+    STS --> P1["web-1 · ordinal 1"]
+    P0 --> C0["data-web-0 PVC"] --> V0["PV 0"]
+    P1 --> C1["data-web-1 PVC"] --> V1["PV 1"]
+    SVC["Headless Service web-headless"] -. "selector / DNS 이름" .-> P0
+    SVC -. "selector / DNS 이름" .-> P1
+```
+
+동적 프로비저닝 가능한 기본 StorageClass와 CSI 구성이 준비된 예시다. `volumeClaimTemplates`로 Pod마다 독립 PVC를 만들고 해당 Pod의 볼륨으로 사용한다. 바인딩과 노드 배정 순서는 StorageClass의 `volumeBindingMode`에 따라 달라진다.
+
+`web-0`을 정상 종료·삭제한 뒤 컨트롤러가 같은 이름의 새 Pod를 생성한다. 이름과 DNS 이름은 유지되고 UID와 IP는 바뀔 수 있다. 기존 `data-web-0` PVC와 연결된 PV를 재사용한다. DNS 주소 반영에는 Pod의 준비 상태와 DNS 캐시가 영향을 준다.
+
+Pod별 저장소는 애플리케이션 데이터 복제·동기화·백업을 대신하지 않는다. 기본 PVC 보존 정책은 Retain이며 StatefulSet 삭제·축소 시 별도 정책을 설정할 수 있다. PVC 삭제 이후 PV 회수 정책은 별도 개념이다.
+
+공식 근거: [StatefulSets](https://kubernetes.io/docs/concepts/workloads/controllers/statefulset/)
 
 ## 3. Pod 내부 구조
 
@@ -431,3 +456,31 @@ kubectl logs POD_NAME --previous
 - [StorageClass와 볼륨 바인딩](https://kubernetes.io/docs/concepts/storage/storage-classes/)
 - [AWS EBS CSI Driver](https://github.com/kubernetes-sigs/aws-ebs-csi-driver)
 - [containerd Pod sandbox](https://github.com/containerd/containerd/blob/main/docs/sandbox-api.md)
+
+## ConfigMap과 Secret
+
+페이지 ID: `configmap-secret` (주요 리소스 관계 다음 학습)
+
+ConfigMap은 일반 설정을, Secret은 비밀번호·API 키·인증서 같은 민감한 정보를 관리한다. 둘 다 API Server를 통해 etcd에 별도 리소스로 저장된다. 설정만 생성해서 Pod가 생기지는 않는다.
+
+Pod는 같은 Namespace의 ConfigMap·Secret 이름과 키를 환경변수 또는 볼륨으로 참조한다. kubelet이 API Server에서 필요한 데이터를 받아 컨테이너 환경변수와 파일을 준비한다. Pod가 etcd에 직접 접근하지 않는다. 환경변수·볼륨 주입과 앱의 Kubernetes API 직접 조회 권한은 별개다.
+
+실행 중인 컨테이너 환경변수는 자동 갱신되지 않는다. 일반 볼륨 파일은 지연 후 갱신되며 앱이 다시 읽어야 한다. subPath 마운트는 자동 갱신되지 않는다. 시뮬레이션 마지막 단계는 APP_MODE 환경변수가 production을 유지하면서 설정 파일이 mode=debug로 갱신된 이후를 비교한다.
+
+Secret의 Base64는 암호화가 아니다. 기본 Kubernetes 설정은 Secret의 etcd 저장 암호화를 보장하지 않으므로 저장 암호화와 RBAC 권한 제한이 필요하다. Pod 생성 권한을 통한 간접 접근도 고려해야 한다. 공개용 가상 비밀번호 demo-only만 예시에 사용한다.
+
+공식 근거: [ConfigMaps](https://kubernetes.io/docs/concepts/configuration/configmap/), [Secrets](https://kubernetes.io/docs/concepts/configuration/secret/)
+
+## Volume 종류와 수명
+
+페이지 ID: `volume-types` (ConfigMap·Secret 다음, PVC·외부 스토리지 이전)
+
+볼륨은 임시 파일, API 설정 파일, 노드 디스크, 외부 저장소 등 여러 소스를 컨테이너에 연결한다. `volumes`는 Pod 수준에서 소스를 정의하고 `volumeMounts`는 컨테이너마다 이름과 경로를 연결한다. 같은 볼륨을 서로 다른 경로에 마운트해도 같은 파일을 공유한다.
+
+종류 비교에는 emptyDir, hostPath, configMap, secret, downwardAPI, projected, persistentVolumeClaim, nfs, local, image가 포함된다. local은 PV에서 정의하고 Pod에서는 PVC로 사용한다. CSI는 드라이버 규격으로 영구·임시 볼륨 모두 가능하다.
+
+세 가지 예시를 5단계로 비교한다: 소스와 경로 연결 → 파일 사용 → 컨테이너 재시작 → Pod 삭제 → 새 Pod 생성. emptyDir의 파일은 같은 Pod의 컨테이너 재시작에는 유지되고 Pod 삭제 후 새 Pod에는 없다. ConfigMap·Secret 원본은 별도 API 리소스로 남고 새 Pod에 다시 투영된다. PVC 예시는 외부 CSI 저장소와 Bound PVC를 가정하며 정상 종료·볼륨 해제 후 새 노드의 Pod에서 같은 데이터를 읽는다.
+
+다른 노드의 사용 가능 여부는 실제 저장소·접근 모드·배치 조건에 따른다. hostPath·local 데이터는 원래 노드에 종속된다. 사용자 파일은 etcd가 아니라 해당 저장소에 존재하며 ConfigMap·Secret 원본 값은 etcd에 저장된다.
+
+공식 근거: [Volumes](https://kubernetes.io/docs/concepts/storage/volumes/), [Ephemeral Volumes](https://kubernetes.io/docs/concepts/storage/ephemeral-volumes/)

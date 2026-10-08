@@ -134,7 +134,7 @@ const resources: Concept[] = [
   {
     id: "pvc",
     label: "PVC → PV → 저장소",
-    text: "Pod가 PVC를 참조하고 PV가 실제 저장소를 연결합니다. 다음 페이지에서 생성·마운트를 살펴봅니다.",
+    text: "Pod가 PVC를 참조하고 PV가 실제 저장소를 연결합니다. PVC 페이지에서 생성·마운트를 살펴봅니다.",
     related: "persistent-storage",
   },
 ];

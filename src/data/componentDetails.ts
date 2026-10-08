@@ -103,10 +103,11 @@ export const COMPONENT_DETAILS: Record<K8sComponentId, ComponentDetailInfo> = {
     name: 'Controller Manager (kube-controller-manager)',
     category: 'Control Plane',
     k8sRole: '현재 상태를 원하는 상태(Desired State)로 수렴시키는 제어 루프',
-    summary: 'Deployment, ReplicaSet, Node, ServiceAccount, EndpointSlice 등 수많은 핵심 컨트롤러들을 단일 프로세스에서 실행합니다.',
+    summary: 'Deployment, ReplicaSet, StatefulSet, Node, ServiceAccount, EndpointSlice 등 수많은 핵심 컨트롤러들을 단일 프로세스에서 실행합니다.',
     deepDive: [
       'Reconciliation Loop (조정 루프): 끊임없이 etcd의 "현재 상태(Actual)"와 사용자가 선언한 "원하는 상태(Desired)"를 비교합니다.',
       'ReplicaSet Controller: replicas가 3인데 현재 파드가 2개라면 1개를 새로 생성하고, 4개라면 1개를 제거합니다.',
+      'StatefulSet Controller: ReplicaSet 없이 Pod를 직접 관리하며 ordinal 이름과 Pod별 PVC를 유지합니다. 기본 OrderedReady 정책은 앞선 Pod가 Running·Ready가 된 뒤 다음 Pod를 생성합니다.',
       'Node Controller: 워커 노드의 하트비트를 감시하여 응답이 없으면(NotReady) 파드를 다른 노드로 대피(Eviction)시킵니다.'
     ],
     cliCommands: [
