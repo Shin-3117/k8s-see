@@ -49,6 +49,8 @@ export interface EtcdRecord {
   type:
     | 'Deployment'
     | 'StatefulSet'
+    | 'Job'
+    | 'CronJob'
     | 'ReplicaSet'
     | 'Pod'
     | 'EndpointSlice'

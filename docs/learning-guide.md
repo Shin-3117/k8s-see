@@ -1,6 +1,6 @@
 # K8sSee 학습 가이드
 
-12개 학습 페이지의 설명 기준입니다. 화면은 같은 순서로 탐색하며, 페이지 내부의 재생은 교육용 시뮬레이션입니다. IP·시간·UID·revision·로그는 실제 클러스터의 조회 결과가 아닙니다.
+13개 학습 페이지의 설명 기준입니다. 화면은 같은 순서로 탐색하며, 페이지 내부의 재생은 교육용 시뮬레이션입니다. IP·시간·UID·revision·로그는 실제 클러스터의 조회 결과가 아닙니다.
 
 ## 1. Kubernetes 전체 구조
 
@@ -126,6 +126,28 @@ flowchart LR
 Pod별 저장소는 애플리케이션 데이터 복제·동기화·백업을 대신하지 않는다. 기본 PVC 보존 정책은 Retain이며 StatefulSet 삭제·축소 시 별도 정책을 설정할 수 있다. PVC 삭제 이후 PV 회수 정책은 별도 개념이다.
 
 공식 근거: [StatefulSets](https://kubernetes.io/docs/concepts/workloads/controllers/statefulset/)
+
+## Job과 CronJob
+
+페이지 ID: `jobs-cronjobs` (StatefulSet 다음 학습)
+
+Job은 끝나는 작업을 관리하고, CronJob은 일정마다 Job을 생성한다. Job 컨트롤러가 Pod를 직접 만들며 ReplicaSet을 거치지 않는다. 스케줄러는 Pod의 노드를 선택하고 kubelet과 런타임이 실행한다. 이 과정의 리소스 읽기·쓰기는 API Server를 거친다.
+
+```mermaid
+flowchart TD
+    CJ["CronJob · schedule / timeZone / jobTemplate"] -->|"CronJob 컨트롤러 · 예약 시각"| J["Job · completions / backoffLimit"]
+    J -->|"Job 컨트롤러"| P["Pod · 배치 프로세스"]
+    P -->|"종료 코드 0"| S["Pod Succeeded → Job Complete"]
+    P -->|"오류 · Never 정책"| F["Pod Failed → 새 Pod 재시도 또는 Job Failed"]
+```
+
+정상 완료, Never 정책에서 새 UID의 Pod로 재시도, backoffLimit=0 실패, 5분마다 새 Job 생성, Forbid 중복 실행 방지, suspend 예약 중지를 비교한다. 정상 CronJob 예시는 Asia/Seoul 09:00과 09:05의 예약을 보여준다. Forbid 분기는 작업이 5분 넘게 실행되도록 Job 실행 제한을 600초로 늘린다. 다른 예시의 실행 제한은 120초다.
+
+Pod의 Succeeded는 phase이고 Job의 Complete는 condition이다. Never와 OnFailure는 Pod 재시작 정책이며 완료된 Job을 자동 재시작하는 설정이 아니다. CronJob의 startingDeadlineSeconds는 늦어진 예약의 시작 유예 시간, Job의 activeDeadlineSeconds는 실행 시간 제한이다. TTL과 historyLimit은 서로 다른 정리 기준이며 먼저 적용된 정책에 의해 기록이 삭제될 수 있다.
+
+일정은 정확히 한 번 실행을 보장하지 않는다. 재시도·중복 실행에 대비한 멱등성이 필요하다. suspend는 진행 중인 Job을 중단하지 않는다. Forbid는 동일 CronJob의 Job 사이에만 적용되며 건너뛴 일정은 이후 deadline 범위에서 실행될 수 있다.
+
+공식 근거: [Job](https://kubernetes.io/docs/concepts/workloads/controllers/job/), [CronJob](https://kubernetes.io/docs/concepts/workloads/controllers/cron-jobs/)
 
 ## 3. Pod 내부 구조
 

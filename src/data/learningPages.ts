@@ -33,6 +33,17 @@ export const LEARNING_PAGES = [
       "Pod가 교체되어도 이름과 PVC는 유지되고 UID와 IP는 달라질 수 있습니다. 데이터 복제와 복구는 애플리케이션이 담당합니다.",
   },
   {
+    id: "jobs-cronjobs",
+    title: "Job과 CronJob",
+    question: "끝나는 작업과 주기적으로 실행할 작업은 어떻게 관리할까?",
+    summary:
+      "Job은 Pod의 작업 완료를 관리하고, CronJob은 정해진 일정에 Job을 생성합니다. 두 컨트롤러의 역할과 실패 시 재시도, 중복 실행 정책을 비교합니다.",
+    guide: "Job 완료와 CronJob 예약 실행",
+    source: "workloads/controllers/cron-jobs",
+    takeaway:
+      "CronJob → Job → Pod 관계입니다. Pod의 Succeeded와 Job의 Complete 조건을 구분하고, 재실행되어도 결과가 중복되지 않도록 작업을 설계합니다.",
+  },
+  {
     id: "pod-internals",
     title: "Pod 내부 구조",
     question: "같은 Pod의 컨테이너는 무엇을 공유할까?",

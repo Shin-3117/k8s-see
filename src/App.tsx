@@ -19,6 +19,8 @@ import { LIFECYCLE_EXAMPLES } from "./data/lifecycleExamples";
 import { YAML_PRESETS } from "./data/yamlPresets";
 import { STATEFULSET_PRESET, STATEFULSET_STEPS } from "./data/statefulsetSteps";
 import { StatefulSetIdentity } from "./components/Learning/StatefulSetIdentity";
+import { batchSteps } from "./data/jobCronJobSteps";
+import { JobCronJobCanvas, JobCronJobLesson, JobCronJobSettings, JobCronJobYaml } from "./components/Learning/JobCronJobLesson";
 import { CONFIG_SECRET_STEPS, CONFIG_SECRET_YAML } from "./data/configSecretSteps";
 import { ConfigSecretLesson } from "./components/Learning/ConfigSecretLesson";
 import { certManagerSteps } from "./data/certManagerSteps";
@@ -154,6 +156,8 @@ export function App() {
 
   const lifecycle = state.page === "pod-lifecycle";
   const statefulset = state.page === "statefulset-creation";
+  const batch = state.page === "jobs-cronjobs";
+  const batchScenario = batch ? batchSteps(progress.example) : [];
   const configuration = state.page === "configmap-secret";
   const certificates = state.page === "cert-manager-ingress";
   const certificateScenario = certificates ? certManagerSteps(progress.example) : [];
@@ -179,6 +183,7 @@ export function App() {
               : STORAGE_STEPS;
   if (volumes) clusterSteps = volumeScenario;
   if (certificates) clusterSteps = certificateScenario;
+  if (batch) clusterSteps = batchScenario;
   if (state.page === "ingress" && INGRESS_ERRORS[progress.example]) {
     const base = INGRESS_STEPS[0];
     clusterSteps = [
@@ -504,6 +509,7 @@ export function App() {
                 <StatefulSetIdentity records={clusterStep.etcdState?.records ?? []} />
               ) : null}
               {configuration ? <ConfigSecretLesson stepIndex={index} /> : null}
+              {batch ? <JobCronJobLesson example={progress.example} onExampleChange={(example) => update({ example, index: 0, playing: false })} /> : null}
               {certificates ? (
                 <CertManagerLesson example={progress.example} tlsReady={certificateScenario[index].tlsReady} onExampleChange={(example) => update({ example, index: 0, playing: false })} />
               ) : null}
@@ -512,7 +518,9 @@ export function App() {
               ) : null}
               <div className="grid grid-cols-1 xl:grid-cols-[minmax(0,1fr)_300px] gap-4 items-start">
                 <div className="min-w-0">
-                  {certificates ? (
+                  {batch ? (
+                    <JobCronJobCanvas key={`${page.id}-${progress.example}`} step={batchScenario[index]} example={progress.example} />
+                  ) : certificates ? (
                     <CertManagerCanvas key={page.id} active={certificateScenario[index].activeConcepts} />
                   ) : volumes ? (
                     <VolumeMountCanvas example={volumePreset} step={volumeScenario[index]} />
@@ -598,7 +606,7 @@ export function App() {
                       : clusterStep.k8sMechanism
                   }
                   {...explanation}
-                  sources={configuration || certificates ? clusterStep.sources : [source]}
+                  sources={configuration || certificates || batch ? clusterStep.sources : [source]}
                 />
               </div>
               {!internal && !lifecycle && clusterStep.podsState.length ? (
@@ -687,7 +695,9 @@ export function App() {
                   시뮬레이션 예시 · Apply와 재생은 실제 클러스터를 변경하지
                   않습니다.
                 </p>
-                {certificates ? (
+                {batch ? (
+                  <JobCronJobYaml example={progress.example} />
+                ) : certificates ? (
                   <CertManagerYaml />
                 ) : volumes ? (
                   <LearningSnippet title={`${volumePreset.name} · volumes와 volumeMounts`} code={volumePreset.yaml} />
@@ -782,6 +792,7 @@ export function App() {
               ) : null}
             </>
           )}
+          {batch ? <JobCronJobSettings /> : null}
           <section className="learning-panel">
             <h2 className="text-sm font-bold text-blue-200">
               이 페이지에서 기억할 내용

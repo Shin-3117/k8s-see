@@ -20,11 +20,12 @@ import { LIFECYCLE_EXAMPLES } from "../src/data/lifecycleExamples";
 import { STATEFULSET_STEPS } from "../src/data/statefulsetSteps";
 import { CONFIG_SECRET_STEPS } from "../src/data/configSecretSteps";
 import { VOLUME_EXAMPLES, volumeExample, volumeSteps } from "../src/data/volumeExamples";
+import { BATCH_EXAMPLES, batchSteps } from "../src/data/jobCronJobSteps";
 import { CERT_MANAGER_STEPS, certManagerSteps } from "../src/data/certManagerSteps";
 
-test("all twelve pages have independent, addressable entry points", () => {
-  assert.equal(LEARNING_PAGES.length, 12);
-  assert.equal(new Set(LEARNING_PAGES.map((p) => p.id)).size, 12);
+test("all thirteen pages have independent, addressable entry points", () => {
+  assert.equal(LEARNING_PAGES.length, 13);
+  assert.equal(new Set(LEARNING_PAGES.map((p) => p.id)).size, 13);
   for (const page of LEARNING_PAGES)
     assert.equal(pageFromHash(pageHref(page.id)), page.id);
   assert.equal(pageFromHash("#/learn/missing"), "overview");
@@ -293,4 +294,62 @@ test("Ingress requests select distinct service backends", () => {
     INGRESS_STEPS[4].activeRoute?.targetService,
     INGRESS_STEPS[5].activeRoute?.targetService,
   );
+});
+
+
+test("Job owns Pods directly and completes after a successful Pod without keeping it running", () => {
+  const steps = batchSteps("normal");
+  assert.ok(steps.every((step) => !step.etcdState!.records.some((r) => ["ReplicaSet", "Deployment", "CronJob"].includes(r.type))));
+  assert.equal(steps[0].etcdState!.records.filter((r) => r.type === "Pod").length, 0);
+  const pending = steps[1].etcdState!.records.find((r) => r.type === "Pod")!.data;
+  assert.equal(pending.spec.nodeName, undefined);
+  assert.equal(pending.metadata.ownerReferences[0].kind, "Job");
+  const completed = steps.at(-1)!.etcdState!.records;
+  const pod = completed.find((r) => r.type === "Pod")!.data;
+  const job = completed.find((r) => r.type === "Job")!.data;
+  assert.equal(pod.status.phase, "Succeeded");
+  assert.equal(pod.status.containerStatuses[0].state.terminated.exitCode, 0);
+  assert.equal(job.status.active, 0);
+  assert.equal(job.status.conditions[0].type, "Complete");
+});
+test("Never retries with a new Pod UID while no-retry failure stops the Job", () => {
+  const records = batchSteps("retry").at(-1)!.etcdState!.records;
+  const pods = records.filter((r) => r.type === "Pod");
+  assert.deepEqual(pods.map((r) => r.data.status.phase), ["Failed", "Succeeded"]);
+  assert.notEqual(pods[0].data.metadata.uid, pods[1].data.metadata.uid);
+  assert.ok(pods.every((r) => r.data.status.containerStatuses[0].restartCount === 0));
+  const job = records.find((r) => r.type === "Job")!.data;
+  assert.equal(job.status.failed, 1);
+  assert.equal(job.status.succeeded, 1);
+  assert.equal(job.status.conditions[0].type, "Complete");
+  const failed = batchSteps("failed").at(-1)!.etcdState!.records;
+  assert.equal(failed.filter((r) => r.type === "Pod").length, 1);
+  const failedJob = failed.find((r) => r.type === "Job")!.data;
+  assert.equal(failedJob.spec.backoffLimit, 0);
+  assert.equal(failedJob.status.conditions[0].reason, "BackoffLimitExceeded");
+  assert.equal(failedJob.status.conditions[0].type, "Failed");
+});
+test("CronJob owns separate scheduled Jobs; Forbid and suspend prevent new creation", () => {
+  const steps = batchSteps("cron");
+  assert.deepEqual(steps[0].etcdState!.records.map((r) => r.type), ["CronJob"]);
+  assert.deepEqual(steps[1].etcdState!.records.map((r) => r.type), ["CronJob", "Job"]);
+  const jobs = steps.at(-1)!.etcdState!.records.filter((r) => r.type === "Job");
+  assert.equal(jobs.length, 2);
+  assert.notEqual(jobs[0].data.metadata.uid, jobs[1].data.metadata.uid);
+  assert.ok(jobs.every((r) => r.data.metadata.ownerReferences[0].kind === "CronJob"));
+  const forbid = batchSteps("forbid").at(-1)!.etcdState!.records;
+  assert.equal(forbid.filter((r) => r.type === "Job").length, 1);
+  assert.equal(forbid.find((r) => r.type === "Pod")!.data.status.phase, "Running");
+  assert.equal(forbid.find((r) => r.type === "Job")!.data.spec.activeDeadlineSeconds, 600);
+  const suspended = batchSteps("suspended").at(-1)!.etcdState!.records;
+  assert.equal(suspended.length, 1);
+  assert.equal(suspended[0].data.spec.suspend, true);
+  for (const example of Object.keys(BATCH_EXAMPLES)) {
+    for (const step of batchSteps(example)) {
+      for (const record of step.etcdState!.records.filter((r) => r.type === "Pod")) {
+        const ownerName = record.data.metadata.ownerReferences[0].name;
+        assert.ok(step.etcdState!.records.some((r) => r.type === "Job" && r.data.metadata.name === ownerName));
+      }
+    }
+  }
 });

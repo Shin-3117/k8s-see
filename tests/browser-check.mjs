@@ -45,6 +45,7 @@ const pages = [
   "overview",
   "pod-creation",
   "statefulset-creation",
+  "jobs-cronjobs",
   "pod-internals",
   "service-networking",
   "ingress",
@@ -90,7 +91,7 @@ try {
       if (
         (width === 1440 && page === "overview") ||
         (width === 390 &&
-          ["ingress", "cert-manager-ingress", "persistent-storage", "pod-lifecycle"].includes(page))
+          ["jobs-cronjobs", "ingress", "cert-manager-ingress", "persistent-storage", "pod-lifecycle"].includes(page))
       )
         command(
           "screenshot",
@@ -131,6 +132,39 @@ try {
   click('button[aria-label="현재 페이지 리셋"]');
   assert.match(current().step, /현재 단계 1\/9/);
   console.log("PASS: StatefulSet ordered creation, PVC reuse and independent page state");
+
+  const batchStep = (number) => {
+    const selector = `button[aria-label^="단계 ${number}:"]`;
+    evaluate(`document.querySelector(${JSON.stringify(selector)}).scrollIntoView({block:"center",inline:"center"})`);
+    click(selector);
+  };
+  go("jobs-cronjobs");
+  batchStep(4);
+  assert.match(evaluate('document.querySelector("[data-testid=batch-result]").innerText'), /Complete=True/);
+  select("배치 실행 예시", "retry");
+  batchStep(7);
+  command("wait", "--fn", "document.querySelector('[data-testid=batch-result]')?.textContent.includes('failed=1')");
+  assert.match(evaluate(`document.querySelector('[aria-label="배치 Pod 상태"]').innerText`), /Failed[\s\S]*Succeeded/);
+  go("statefulset-creation");
+  go("jobs-cronjobs");
+  assert.match(current().step, /현재 단계 7\/7/);
+  click('button[aria-label="현재 페이지 리셋"]');
+  assert.match(current().step, /현재 단계 1\/7/);
+  for (const [example, total, expected] of [["failed", 5, /Failed=True/], ["cron", 6, /Job 2개/], ["forbid", 5, /새 Job 없음/], ["suspended", 2, /일시 중지/]]) {
+    select("배치 실행 예시", example);
+    batchStep(total);
+    assert.match(evaluate('document.querySelector("[data-testid=batch-result]").innerText'), expected);
+  }
+  select("배치 실행 예시", "normal");
+  click('button[aria-label="재생 속도 2배"]');
+  command("find", "role", "button", "click", "--name", "자동 재생");
+  command("wait", "1800");
+  assert.match(current().step, /현재 단계 2\/4/);
+  go("pod-creation");
+  command("wait", "1800");
+  go("jobs-cronjobs");
+  assert.match(current().step, /현재 단계 2\/4.*일시정지/);
+  console.log("PASS: Job completion, retry, failure and CronJob schedules, Forbid, suspend and page state");
 
   go("configmap-secret");
   click('button[aria-label^="단계 2:"]');
