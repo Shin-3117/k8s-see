@@ -128,7 +128,7 @@ function sourceRecords(id: VolumeExampleId): EtcdRecord[] {
       apiVersion: "v1", kind: "ConfigMap", metadata: { name: "volume-settings", namespace: "default" }, data: { "app.conf": "mode=production" },
     }),
     make("Secret", "/registry/secrets/default/volume-secret", {
-      apiVersion: "v1", kind: "Secret", metadata: { name: "volume-secret", namespace: "default" }, type: "Opaque", data: { password: "ZGVtby1vbmx5" },
+      apiVersion: "v1", kind: "Secret", metadata: { name: "volume-secret", namespace: "default" }, type: "Opaque", data: { password: "password" },
     }),
   ];
   if (id === "pvc") return [
